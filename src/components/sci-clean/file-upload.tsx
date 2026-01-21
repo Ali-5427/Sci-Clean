@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { UploadCloud, FileCsv } from 'lucide-react';
+import { UploadCloud, FileSpreadsheet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface FileUploadProps {
@@ -56,7 +56,7 @@ const FileUpload = ({ onFileProcess }: FileUploadProps) => {
           <p className="text-muted-foreground">or click to select a file</p>
           <div className="mt-4 text-sm text-center text-muted-foreground">
             <div className="flex items-center justify-center gap-2">
-                <FileCsv className="w-5 h-5" />
+                <FileSpreadsheet className="w-5 h-5" />
                 <span>.csv files only</span>
             </div>
             <p>Maximum file size: 500MB</p>
