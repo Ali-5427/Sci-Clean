@@ -3,74 +3,72 @@
 import { useState } from 'react';
 import type { ProcessedCsvData, DataType, ColumnProfile } from '@/lib/types';
 
-// Mock SHA-256 Hashing
-async function mockHash(file: File): Promise<string> {
-  const text = `${file.name}-${file.size}-${file.lastModified}`;
-  const buffer = new TextEncoder().encode(text);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+// Real SHA-256 Hashing
+async function realHash(file: File): Promise<string> {
+  const fileBuffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', fileBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Mock CSV parsing and profiling
-function mockProcess(file: File): Omit<ProcessedCsvData, 'fileHash' | 'processingTime'> {
-  const fileSize = file.size;
-  const rowCount = Math.floor(fileSize / (Math.random() * 200 + 100)); // Estimate rows
-  const columnCount = Math.floor(Math.random() * 40) + 5;
-  
-  const columnNames = Array.from({ length: columnCount }, (_, i) => `column_${i + 1}`);
-  
-  const dataTypes: DataType[] = ['NUMERIC', 'TEXT', 'DATE', 'CATEGORICAL'];
+// Simple CSV Parser and Profiler
+function processCsvContent(fileName: string, fileSize: number, csvContent: string): Omit<ProcessedCsvData, 'fileHash' | 'processingTime'> {
+  const lines = csvContent.trim().split(/\r?\n/);
+  if (lines.length < 2) {
+    // Not enough data to process, or just a header
+    return {
+      fileName,
+      fileSize,
+      rowCount: lines.length - 1 > 0 ? lines.length - 1 : 0,
+      columnCount: lines[0]?.split(',').length || 0,
+      columnProfiles: [],
+      sparsityScore: 0,
+    };
+  }
+
+  const header = lines[0].split(',').map(h => h.trim());
+  const dataRows = lines.slice(1).map(line => line.split(','));
+  const rowCount = dataRows.length;
+  const columnCount = header.length;
 
   let totalMissing = 0;
 
-  const columnProfiles: ColumnProfile[] = columnNames.map(name => {
-    const missingCount = Math.floor(Math.random() * (rowCount * 0.3)); // up to 30% missing
+  const columnProfiles: ColumnProfile[] = header.map((colName, colIndex) => {
+    let missingCount = 0;
+    const sampleValues: string[] = [];
+    
+    for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        // Handle rows that might have fewer columns than the header
+        const value = dataRows[rowIndex][colIndex]?.trim() ?? '';
+      
+        const isMissing = value === '' || value.toLowerCase() === 'null' || value.toLowerCase() === 'na' || value.toLowerCase() === 'n/a';
+      
+        if (isMissing) {
+            missingCount++;
+        } else if (sampleValues.length < 10) {
+            sampleValues.push(value);
+        }
+    }
+
     totalMissing += missingCount;
-    const sampleValues = Array.from({ length: 10 }, () => {
-      const type = dataTypes[Math.floor(Math.random() * dataTypes.length)];
-      if (type === 'NUMERIC') return String(Math.floor(Math.random() * 1000));
-      if (type === 'TEXT') return Math.random().toString(36).substring(7);
-      if (type === 'DATE') return new Date(Date.now() - Math.random() * 1e12).toISOString().split('T')[0];
-      return ['A', 'B', 'C', 'D'][Math.floor(Math.random() * 4)];
-    });
+
+    // This is just a placeholder, the AI flow will determine the actual type.
+    const initialTypeGuess: DataType = 'TEXT'; 
 
     return {
-      name,
+      name: colName,
       missingCount,
-      missingPercentage: (missingCount / rowCount) * 100,
+      missingPercentage: rowCount > 0 ? (missingCount / rowCount) * 100 : 0,
       sampleValues,
-      initialTypeGuess: dataTypes[Math.floor(Math.random() * dataTypes.length)],
+      initialTypeGuess,
     };
   });
 
   const totalCells = rowCount * columnCount;
-  const sparsityScore = (totalMissing / totalCells) * 100;
-  
-  // Create more realistic profiles for some columns
-  if (columnProfiles.length > 0) {
-      columnProfiles[0].name = "age";
-      columnProfiles[0].initialTypeGuess = "NUMERIC";
-      columnProfiles[0].sampleValues = ["25", "34", "51", "28", "67", "NULL", "42"];
-  }
-  if (columnProfiles.length > 1) {
-      columnProfiles[1].name = "income";
-      columnProfiles[1].initialTypeGuess = "TEXT";
-      columnProfiles[1].sampleValues = ["55000", "72000.50", "NULL", "120,000", "98500"];
-  }
-  if (columnProfiles.length > 2) {
-    columnProfiles[2].name = "diagnosis";
-    columnProfiles[2].initialTypeGuess = "CATEGORICAL";
-    columnProfiles[2].sampleValues = ["Healthy", "Type 2 Diabetes", "Hypertension", "Healthy"];
-  }
-   if (columnProfiles.length > 3) {
-    columnProfiles[3].name = "date_admitted";
-    columnProfiles[3].initialTypeGuess = "DATE";
-    columnProfiles[3].sampleValues = ["2022-01-15", "2023-05-20", "21/07/2023", "NULL"];
-  }
+  const sparsityScore = totalCells > 0 ? (totalMissing / totalCells) * 100 : 0;
 
   return {
-    fileName: file.name,
+    fileName,
     fileSize,
     rowCount,
     columnCount,
@@ -78,6 +76,7 @@ function mockProcess(file: File): Omit<ProcessedCsvData, 'fileHash' | 'processin
     sparsityScore,
   };
 }
+
 
 export function useCsvProcessor() {
   const [progress, setProgress] = useState(0);
@@ -91,35 +90,51 @@ export function useCsvProcessor() {
     setProgress(0);
     const startTime = Date.now();
 
-    const processingTime = Math.max(1000, file.size / 100000); // Simulate time based on size
+    // The processing time is mostly reading the file, so we'll simulate progress
+    // while that happens. This is for UX only.
+    const processingTime = Math.max(500, file.size / 500000);
 
     let currentProgress = 0;
     const interval = setInterval(() => {
       currentProgress += 10;
-      if (currentProgress > 100) currentProgress = 100;
-      setProgress(currentProgress);
-      if (currentProgress >= 100) {
-        clearInterval(interval);
+      if (currentProgress > 100) {
+          currentProgress = 100;
+          clearInterval(interval);
       }
+      setProgress(currentProgress);
     }, processingTime / 10);
 
-    // Simulate async operations like hashing and processing
-    const [fileHash, processedPart] = await Promise.all([
-      mockHash(file),
-      new Promise<Omit<ProcessedCsvData, 'fileHash' | 'processingTime'>>(resolve => setTimeout(() => resolve(mockProcess(file)), processingTime)),
-    ]);
-    
-    const endTime = Date.now();
-    const duration = (endTime - startTime) / 1000;
+    try {
+        const fileContent = await file.text();
+        
+        const [fileHash, processedPart] = await Promise.all([
+            realHash(file),
+            new Promise<Omit<ProcessedCsvData, 'fileHash' | 'processingTime'>>(resolve => {
+                const data = processCsvContent(file.name, file.size, fileContent);
+                resolve(data);
+            }),
+        ]);
 
-    const finalData: ProcessedCsvData = {
-      ...processedPart,
-      fileHash,
-      processingTime: duration,
-    };
-    
-    onComplete(finalData);
-    setIsProcessing(false);
+        const endTime = Date.now();
+        const duration = (endTime - startTime) / 1000;
+
+        const finalData: ProcessedCsvData = {
+          ...processedPart,
+          fileHash,
+          processingTime: duration,
+        };
+        
+        // Ensure progress is 100 at the end
+        clearInterval(interval);
+        setProgress(100);
+        onComplete(finalData);
+
+    } catch(e) {
+        console.error("Failed to process file:", e);
+        clearInterval(interval);
+    } finally {
+        setIsProcessing(false);
+    }
   };
 
   return { progress, isProcessing, processFile };
