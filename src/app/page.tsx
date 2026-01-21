@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { AppState, ProcessedCsvData, AuditLogEntry, ConfirmedTypes } from '@/lib/types';
 import Header from '@/components/layout/header';
 import FileUpload from '@/components/sci-clean/file-upload';
@@ -79,7 +79,7 @@ export default function Home() {
             <div className="md:col-span-12 lg:col-span-3">
               <DataHealthDashboard data={processedData} />
             </div>
-            <div className="md:col-span-7 lg:col-span-6">
+            <div className="flex flex-col md:col-span-7 lg:col-span-6">
               <TypeInferencePanel
                 data={processedData}
                 addAuditLog={addAuditLog}
@@ -130,8 +130,8 @@ export default function Home() {
             <CardContent className="p-2">
               <div className="flex items-center justify-between">
                 {steps.map((step, index) => (
-                  <>
-                    <div key={step.name} className="flex flex-col items-center gap-2 text-center md:flex-row md:gap-4">
+                  <React.Fragment key={step.name}>
+                    <div className="flex flex-col items-center gap-2 text-center md:flex-row md:gap-4">
                       <div className={`flex items-center justify-center w-10 h-10 rounded-full
                         ${step.status === 'active' ? 'bg-primary text-primary-foreground' : ''}
                         ${step.status === 'completed' ? 'bg-green-500 text-white' : ''}
@@ -152,7 +152,7 @@ export default function Home() {
                         ${steps[index+1].status !== 'pending' ? 'bg-primary' : 'bg-border'}
                       `}></div>
                     )}
-                  </>
+                  </React.Fragment>
                 ))}
               </div>
             </CardContent>
