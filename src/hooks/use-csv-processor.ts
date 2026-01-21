@@ -90,23 +90,27 @@ export function useCsvProcessor() {
     setProgress(0);
     const startTime = Date.now();
 
-    // The processing time is mostly reading the file, so we'll simulate progress
-    // while that happens. This is for UX only.
-    const processingTime = Math.max(500, file.size / 500000);
+    // --- MODIFICATION: Force a 5-second animation ---
+    const animationDuration = 5000;
+    const intervalTime = 50; // Update progress every 50ms
+    const progressStep = 100 / (animationDuration / intervalTime); // This calculates to 1
 
-    let currentProgress = 0;
     const interval = setInterval(() => {
-      currentProgress += 10;
-      if (currentProgress > 100) {
-          currentProgress = 100;
+      setProgress(prev => {
+        const newProgress = prev + progressStep;
+        if (newProgress >= 100) {
           clearInterval(interval);
-      }
-      setProgress(currentProgress);
-    }, processingTime / 10);
+          return 100;
+        }
+        return newProgress;
+      });
+    }, intervalTime);
 
-    try {
+    // This promise ensures the animation runs for at least 5 seconds.
+    const animationPromise = new Promise(resolve => setTimeout(resolve, animationDuration));
+
+    const processingPromise = (async () => {
         const fileContent = await file.text();
-        
         const [fileHash, processedPart] = await Promise.all([
             realHash(file),
             new Promise<Omit<ProcessedCsvData, 'fileHash' | 'processingTime'>>(resolve => {
@@ -114,17 +118,20 @@ export function useCsvProcessor() {
                 resolve(data);
             }),
         ]);
-
         const endTime = Date.now();
         const duration = (endTime - startTime) / 1000;
-
-        const finalData: ProcessedCsvData = {
+        return {
           ...processedPart,
           fileHash,
           processingTime: duration,
         };
+    })();
+
+    try {
+        // Wait for both the real processing and the minimum animation time to complete.
+        const [finalData] = await Promise.all([processingPromise, animationPromise]);
         
-        // Ensure progress is 100 at the end
+        // Ensure progress is 100 and interval is cleared.
         clearInterval(interval);
         setProgress(100);
         onComplete(finalData);
@@ -132,6 +139,7 @@ export function useCsvProcessor() {
     } catch(e) {
         console.error("Failed to process file:", e);
         clearInterval(interval);
+        setProgress(0); // Reset on error
     } finally {
         setIsProcessing(false);
     }
