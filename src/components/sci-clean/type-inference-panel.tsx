@@ -174,7 +174,7 @@ const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTyp
   const confirmedCount = Object.keys(confirmedTypes).length;
 
   return (
-    <Card className="h-full">
+    <Card className="flex flex-col h-full">
         <CardHeader>
             <CardTitle className="flex items-center justify-between text-2xl font-headline">
                 <span>Confirm Column Types</span>
@@ -184,8 +184,8 @@ const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTyp
                 Review the AI-detected data types for each column. Your confirmations will be used to generate the cleaning script.
             </CardDescription>
         </CardHeader>
-        <CardContent>
-            <ScrollArea className="h-[calc(100vh-22rem)] pr-4">
+        <CardContent className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full pr-4">
                 <div className="space-y-4">
                 {data.columnProfiles.map(col => (
                     <TypeConfirmationCard

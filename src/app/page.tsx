@@ -75,7 +75,7 @@ export default function Home() {
       case 'DASHBOARD':
         if (!processedData) return null;
         return (
-          <div className="grid grid-cols-1 gap-6 p-4 md:grid-cols-12 lg:p-6">
+          <div className="grid h-full grid-cols-1 gap-6 p-4 md:grid-cols-12 lg:p-6">
             <div className="md:col-span-12 lg:col-span-3">
               <DataHealthDashboard data={processedData} />
             </div>
@@ -124,7 +124,7 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <Header />
-      <main className="flex-1">
+      <main className="flex flex-col flex-1">
         <div className="p-4 border-b border-border bg-card/50">
           <Card className="max-w-4xl mx-auto bg-transparent border-none shadow-none">
             <CardContent className="p-2">
