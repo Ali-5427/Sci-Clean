@@ -44,10 +44,12 @@ const TypeConfirmationCard = ({
   const [aiResult, setAiResult] = useState<AIResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<DataType | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const runInference = async () => {
       setIsLoading(true);
+      setError(null);
       try {
         const result = await inferAndConfirmColumnTypes({
           columnName: column.name,
@@ -57,8 +59,9 @@ const TypeConfirmationCard = ({
         });
         setAiResult(result);
         setSelectedType(result.detectedType);
-      } catch (error) {
-        console.error("AI inference failed for column:", column.name, error);
+      } catch (err) {
+        console.error("AI inference failed for column:", column.name, err);
+        setError("AI inference failed for this column.");
       } finally {
         setIsLoading(false);
       }
@@ -85,6 +88,23 @@ const TypeConfirmationCard = ({
           <Skeleton className="w-24 h-10" />
           <Skeleton className="w-32 h-10" />
         </CardFooter>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-destructive/50 bg-destructive/10">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between text-lg font-headline">
+            {column.name}
+            <Badge variant="destructive" className="gap-1"><AlertTriangle className="w-4 h-4"/> Error</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-destructive">{error}</p>
+          <p className="mt-2 text-xs text-muted-foreground">Check the browser console for more details.</p>
+        </CardContent>
       </Card>
     );
   }
