@@ -30,4 +30,4 @@ Sci-Clean Studio is a lightweight, modern web application designed to streamline
 -   **Icons:** [Lucide React](https://lucide.dev/)
 
 ---
-*Built with Firebase Studio*
+*Built with love ❤️ by Ali*
