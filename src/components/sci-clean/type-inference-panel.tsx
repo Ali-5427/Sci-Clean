@@ -60,8 +60,9 @@ const TypeConfirmationCard = ({
         setAiResult(result);
         setSelectedType(result.detectedType);
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
         console.error("AI inference failed for column:", column.name, err);
-        setError("AI inference failed for this column.");
+        setError(`AI Error: ${errorMessage}`);
       } finally {
         setIsLoading(false);
       }
@@ -102,8 +103,8 @@ const TypeConfirmationCard = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-destructive">{error}</p>
-          <p className="mt-2 text-xs text-muted-foreground">Check the browser console for more details.</p>
+          <p className="text-sm text-destructive font-mono break-all">{error}</p>
+          <p className="mt-2 text-xs text-muted-foreground">This often indicates an issue with your API key or Google Cloud project configuration.</p>
         </CardContent>
       </Card>
     );
