@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { UploadCloud, FileSpreadsheet } from 'lucide-react';
+import { UploadCloud, FileSpreadsheet, FileQuestion } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface FileUploadProps {
@@ -54,12 +54,24 @@ const FileUpload = ({ onFileProcess }: FileUploadProps) => {
           <UploadCloud className={`w-16 h-16 transition-transform duration-300 ${isDragActive || isDragging ? 'scale-110 text-primary' : 'text-muted-foreground'}`} />
           <h2 className="text-2xl font-bold font-headline">Drag & Drop your CSV file here</h2>
           <p className="text-muted-foreground">or click to select a file</p>
-          <div className="mt-4 text-sm text-center text-muted-foreground">
-            <div className="flex items-center justify-center gap-2">
-                <FileSpreadsheet className="w-5 h-5" />
-                <span>.csv files only</span>
-            </div>
-            <p>Maximum file size: 500MB</p>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-muted-foreground">
+            🧹 The app helps researchers clean data from CSV files. 🤖 An AI analyzes uploaded data, detects column types (e.g., numeric, text, date), and identifies missing values. 🐍 Users review the AI's suggestions and can then export both a cleaned CSV file and a reproducible Python script that documents the entire cleaning process.
+            </p>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Don't have a file?{' '}
+              <a
+                href="/sample_with_errors.csv"
+                download="sample_with_errors.csv"
+                className="underline text-primary hover:text-primary/80"
+                onClick={(e) => e.stopPropagation()} // Prevents dropzone from triggering
+              >
+                Download a sample CSV
+              </a>{' '}
+              to try it out.
+              <br />
+              (.csv files up to 500MB are supported)
+            </p>
           </div>
         </div>
       </div>
