@@ -49,3 +49,8 @@ export interface ConfirmedTypes {
 export type AIResult = InferAndConfirmColumnTypesOutput;
 
 export type ColumnAnalysisResult = AIResult['results'][0];
+
+export interface ChatMessage {
+  role: 'user' | 'model';
+  content: string;
+}

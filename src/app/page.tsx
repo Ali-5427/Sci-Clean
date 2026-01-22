@@ -8,6 +8,7 @@ import DataHealthDashboard from '@/components/sci-clean/data-health-dashboard';
 import TypeInferencePanel from '@/components/sci-clean/type-inference-panel';
 import AuditLog from '@/components/sci-clean/audit-log';
 import ExportPanel from '@/components/sci-clean/export-panel';
+import ChatbotPanel from '@/components/sci-clean/chatbot-panel';
 import { useCsvProcessor } from '@/hooks/use-csv-processor';
 import { Bot, FileCheck2, ListChecks, UploadCloud } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -96,6 +97,7 @@ export default function Home() {
                   disabled={!allTypesConfirmed}
                   addAuditLog={addAuditLog}
                 />
+                <ChatbotPanel processedData={processedData} />
               </div>
             </div>
           </div>
