@@ -184,19 +184,19 @@ const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTyp
                 Review the AI-detected data types for each column. Your confirmations will be used to generate the cleaning script.
             </CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full pr-4">
-                <div className="space-y-4">
-                {data.columnProfiles.map(col => (
-                    <TypeConfirmationCard
-                    key={col.name}
-                    column={col}
-                    fileSize={data.fileSize}
-                    sparsityScore={data.sparsityScore}
-                    onConfirm={handleConfirmType}
-                    isConfirmed={!!confirmedTypes[col.name]}
-                    />
-                ))}
+        <CardContent className="flex-1 p-0 overflow-hidden">
+            <ScrollArea className="h-full">
+                <div className="p-6 pt-0 pr-8 space-y-4">
+                    {data.columnProfiles.map(col => (
+                        <TypeConfirmationCard
+                        key={col.name}
+                        column={col}
+                        fileSize={data.fileSize}
+                        sparsityScore={data.sparsityScore}
+                        onConfirm={handleConfirmType}
+                        isConfirmed={!!confirmedTypes[col.name]}
+                        />
+                    ))}
                 </div>
             </ScrollArea>
         </CardContent>
