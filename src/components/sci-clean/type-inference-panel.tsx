@@ -184,8 +184,8 @@ const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTyp
                 Review the AI-detected data types for each column. Your confirmations will be used to generate the cleaning script.
             </CardDescription>
         </CardHeader>
-        <CardContent className="relative flex-1 p-0">
-            <ScrollArea className="absolute inset-0">
+        <CardContent className="flex-1 p-0 overflow-y-hidden">
+            <ScrollArea className="w-full h-full">
                 <div className="p-6 pt-0 pr-8 space-y-4">
                     {data.columnProfiles.map(col => (
                         <TypeConfirmationCard
