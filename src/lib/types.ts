@@ -1,4 +1,4 @@
-import type { inferAndConfirmColumnTypes } from '@/ai/flows/infer-and-confirm-column-types';
+import type { InferAndConfirmColumnTypesOutput } from '@/ai/flows/infer-and-confirm-column-types';
 
 export type DataType = 'NUMERIC' | 'TEXT' | 'DATE' | 'CATEGORICAL';
 
@@ -46,4 +46,6 @@ export interface ConfirmedTypes {
   [columnName: string]: ConfirmedType;
 }
 
-export type AIResult = Awaited<ReturnType<typeof inferAndConfirmColumnTypes>>;
+export type AIResult = InferAndConfirmColumnTypesOutput;
+
+export type ColumnAnalysisResult = AIResult['results'][0];

@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { ProcessedCsvData, AuditLogEntry, ConfirmedTypes, DataType, AIResult } from '@/lib/types';
+import type { ProcessedCsvData, AuditLogEntry, ConfirmedTypes, DataType, ColumnAnalysisResult } from '@/lib/types';
 import { inferAndConfirmColumnTypes } from '@/ai/flows/infer-and-confirm-column-types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Check, ChevronDown, Bot, AlertTriangle, Hash, Type as TypeIcon, Calendar, Tags, CheckCircle2 } from 'lucide-react';
+import { Check, Bot, AlertTriangle, Hash, Type as TypeIcon, Calendar, Tags, CheckCircle2 } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 
 interface TypeInferencePanelProps {
@@ -28,47 +28,39 @@ const TypeIconComponent = ({ type }: { type: DataType }) => {
   }
 };
 
+const TypeConfirmationCardSkeleton = () => (
+    <Card>
+      <CardHeader><Skeleton className="w-2/3 h-6" /></CardHeader>
+      <CardContent className="space-y-3">
+        <Skeleton className="w-1/2 h-4" />
+        <Skeleton className="w-full h-4" />
+        <Skeleton className="w-full h-4" />
+      </CardContent>
+      <CardFooter className="gap-2">
+        <Skeleton className="w-24 h-10" />
+        <Skeleton className="w-32 h-10" />
+      </CardFooter>
+    </Card>
+);
+
 const TypeConfirmationCard = ({
   column,
-  fileSize,
-  sparsityScore,
+  aiResult,
   onConfirm,
   isConfirmed,
 }: {
   column: ProcessedCsvData['columnProfiles'][0];
-  fileSize: number;
-  sparsityScore: number;
+  aiResult: ColumnAnalysisResult | undefined;
   onConfirm: (columnName: string, type: DataType) => void;
   isConfirmed: boolean;
 }) => {
-  const [aiResult, setAiResult] = useState<AIResult | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedType, setSelectedType] = useState<DataType | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<DataType | null>(aiResult?.detectedType || null);
 
   useEffect(() => {
-    const runInference = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const result = await inferAndConfirmColumnTypes({
-          columnName: column.name,
-          sampleValues: column.sampleValues,
-          fileSize,
-          sparsityScore,
-        });
-        setAiResult(result);
-        setSelectedType(result.detectedType);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        console.error("AI inference failed for column:", column.name, err);
-        setError(`AI Error: ${errorMessage}`);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    runInference();
-  }, [column, fileSize, sparsityScore]);
+    if(aiResult) {
+        setSelectedType(aiResult.detectedType);
+    }
+  }, [aiResult]);
 
   const handleConfirm = () => {
     if (selectedType) {
@@ -76,41 +68,16 @@ const TypeConfirmationCard = ({
     }
   };
 
-  if (isLoading) {
+  if (!aiResult) {
     return (
-      <Card>
-        <CardHeader><Skeleton className="w-2/3 h-6" /></CardHeader>
-        <CardContent className="space-y-3">
-          <Skeleton className="w-1/2 h-4" />
-          <Skeleton className="w-full h-4" />
-          <Skeleton className="w-full h-4" />
-        </CardContent>
-        <CardFooter className="gap-2">
-          <Skeleton className="w-24 h-10" />
-          <Skeleton className="w-32 h-10" />
-        </CardFooter>
-      </Card>
+        <Card className="border-muted/50 bg-muted/20">
+            <CardHeader><CardTitle className="text-lg font-headline">{column.name}</CardTitle></CardHeader>
+            <CardContent>
+                <p className="text-sm text-muted-foreground">Waiting for analysis...</p>
+            </CardContent>
+        </Card>
     );
   }
-
-  if (error) {
-    return (
-      <Card className="border-destructive/50 bg-destructive/10">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between text-lg font-headline">
-            {column.name}
-            <Badge variant="destructive" className="gap-1"><AlertTriangle className="w-4 h-4"/> Error</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-destructive font-mono break-all">{error}</p>
-          <p className="mt-2 text-xs text-muted-foreground">This often indicates an issue with your API key or Google Cloud project configuration.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!aiResult) return null;
 
   const confidenceColor = aiResult.confidence > 80 ? 'text-green-400' : aiResult.confidence > 60 ? 'text-yellow-400' : 'text-red-400';
 
@@ -163,6 +130,39 @@ const TypeConfirmationCard = ({
 };
 
 const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTypes }: TypeInferencePanelProps) => {
+  const [analysisResults, setAnalysisResults] = useState<ColumnAnalysisResult[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (!data?.columnProfiles?.length) return;
+
+    const runInference = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const input = {
+                columns: data.columnProfiles.map(p => ({
+                    columnName: p.name,
+                    sampleValues: p.sampleValues,
+                })),
+                fileSize: data.fileSize,
+                sparsityScore: data.sparsityScore,
+            };
+            const result = await inferAndConfirmColumnTypes(input);
+            setAnalysisResults(result.results);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            console.error("AI inference failed:", err);
+            setError(`AI Error: ${errorMessage}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    runInference();
+  }, [data]);
+
+
   const handleConfirmType = (columnName: string, type: DataType) => {
     setConfirmedTypes(prev => ({
       ...prev,
@@ -173,6 +173,20 @@ const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTyp
   
   const totalColumns = data.columnProfiles.length;
   const confirmedCount = Object.keys(confirmedTypes).length;
+
+  const PanelError = ({ error }: { error: string}) => (
+    <Card className="border-destructive/50 bg-destructive/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg font-headline text-destructive">
+            <AlertTriangle className="w-5 h-5"/> Analysis Failed
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-destructive/90 font-mono break-all">{error}</p>
+          <p className="mt-2 text-xs text-muted-foreground">This often indicates an issue with your API key, rate limits, or Google Cloud project configuration.</p>
+        </CardContent>
+      </Card>
+  );
 
   return (
     <Card className="flex flex-col h-full">
@@ -188,16 +202,20 @@ const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTyp
         <CardContent className="flex-1 p-0 overflow-y-hidden">
             <ScrollArea className="w-full h-full">
                 <div className="p-6 pt-0 pr-8 space-y-4">
-                    {data.columnProfiles.map(col => (
-                        <TypeConfirmationCard
-                        key={col.name}
-                        column={col}
-                        fileSize={data.fileSize}
-                        sparsityScore={data.sparsityScore}
-                        onConfirm={handleConfirmType}
-                        isConfirmed={!!confirmedTypes[col.name]}
-                        />
-                    ))}
+                    {isLoading && Array.from({ length: Math.min(totalColumns, 5) }).map((_, i) => <TypeConfirmationCardSkeleton key={i} />)}
+                    {error && <PanelError error={error} />}
+                    {!isLoading && !error && data.columnProfiles.map(col => {
+                        const result = analysisResults?.find(r => r.columnName === col.name);
+                        return (
+                            <TypeConfirmationCard
+                                key={col.name}
+                                column={col}
+                                aiResult={result}
+                                onConfirm={handleConfirmType}
+                                isConfirmed={!!confirmedTypes[col.name]}
+                            />
+                        )
+                    })}
                 </div>
             </ScrollArea>
         </CardContent>
