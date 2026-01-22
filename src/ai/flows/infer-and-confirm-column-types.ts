@@ -57,28 +57,38 @@ Your response must be a single JSON object containing a "results" key. The value
   "confidence": <0-100>
 }
 
-Use the following heuristics to determine the type and confidence score:
+**EXPERT-LEVEL HEURISTICS & OVERRIDES:**
+You must follow these rules to resolve ambiguity like a senior data analyst.
+
+1.  **Geographic Data is Always Numeric:**
+    *   If a column name is 'latitude', 'longitude', 'lat', or 'lon', you **MUST** classify it as **NUMERIC**. Confidence should be HIGH (95%+) even if some sample values are missing or invalid. This data is for mapping and calculation.
+
+2.  **Version Strings are Always Text:**
+    *   If sample values look like software versions (e.g., 'v1.2.3', '2.0.1-beta', '5.2'), you **MUST** classify the column as **TEXT**. Do not be confused by the numbers; these are not for calculation.
+
+3.  **Column Name is a Strong Signal:**
+    *   When the column name provides a strong clue (e.g., 'reading_value', 'unit_price', 'age'), you should be confident in that type. Prefer **NUMERIC** for these columns even if a few sample values are messy (e.g., contain text, currency symbols, or are missing). The goal is to identify the *intended* type.
+
+**Standard Analysis Process:**
+
+Use the following heuristics to determine the type and confidence score, applying the expert overrides above when necessary.
 
 1.  **Analyze the Column Name for Clues:**
-    *   **NUMERIC indicators:** value, amount, cost, price, total, count, age, quantity, _id (if purely numeric samples).
+    *   **NUMERIC indicators:** value, amount, cost, price, total, count, age, quantity, latitude, longitude. _id (if purely numeric samples).
     *   **DATE indicators:** date, time, _at, _on, timestamp.
     *   **CATEGORICAL indicators:** type, category, status, gender, country, code. Also is_, has_, or _flag suggest boolean-like categories.
-    *   **TEXT indicators:** name, description, notes, comment, address, _id (if alphanumeric).
+    *   **TEXT indicators:** name, description, notes, comment, address, version, hash, _id (if alphanumeric).
 
 2.  **Analyze the Sample Values for Patterns:**
-    *   **NUMERIC:** The values consist primarily of numbers, possibly with decimals, commas, or currency symbols. Even if there are a few non-numeric values (like 'N/A' or errors), if the majority are numbers, it is still NUMERIC. For columns with only 1s and 0s, strongly prefer NUMERIC, especially if the name contains 'flag' or 'is_'.
-    *   **DATE:** The values resemble common date or time formats (e.g., YYYY-MM-DD, MM/DD/YYYY, M/D/YY, YYYY-MM-DD HH:MM:SS).
-    *   **CATEGORICAL:** The number of unique values is very low (e.g., under 20). Look for repeating values like "High"/"Medium"/"Low", "True"/"False", "Yes"/"No", or country codes.
-    *   **TEXT:** The values are free-form text, long strings, or alphanumeric IDs that don't fit other categories.
+    *   **NUMERIC:** The values consist primarily of numbers. If the column name is a strong NUMERIC indicator, be confident. A column of only \`1\`s and \`0\`s should be classified as \`NUMERIC\`.
+    *   **DATE:** The values resemble common date or time formats (e.g., YYYY-MM-DD, MM/DD/YYYY, Unix timestamps).
+    *   **CATEGORICAL:** The number of unique values is very low (e.g., under 20).
+    *   **TEXT:** The values are free-form text, long strings, alphanumeric IDs, or software versions.
 
 3.  **Calculate a Confidence Score (0-100%):**
-    *   **HIGH (90-100%):** Both the column name and the sample values strongly and unambiguously point to the same type. (e.g., column 'unit_price' with samples '1.99', '5.00').
-    *   **MEDIUM (70-89%):** The sample values suggest a type, but the name is generic, or vice-versa. (e.g., column 'c1' with samples '2024-01-05', '2024-02-10').
-    *   **LOW (<70%):** The name and values are ambiguous or conflict. (e.g., column 'status' with samples '1', '2', '3' could be NUMERIC or CATEGORICAL).
-
-**CRITICAL:** Apply this logic to columns like those in a sample file:
-- Columns named 'reading_value_2' and 'reading_value_3' contain numbers but are sparse. The name 'reading_value' is a strong indicator for **NUMERIC**.
-- A column named 'abnormal_flag' containing only 1s and 0s must be identified as **NUMERIC**.
+    *   **HIGH (90-100%):** Both the column name and the sample values strongly and unambiguously point to the same type, or an Expert Override rule applies.
+    *   **MEDIUM (70-89%):** The sample values suggest a type, but the name is generic, or vice-versa.
+    *   **LOW (<70%):** The name and values are ambiguous or conflict.
 
 Apply your enhanced analysis to the following columns:
 {{{json columns}}}`,
