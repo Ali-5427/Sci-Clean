@@ -54,7 +54,7 @@ const FileUpload = ({ onFileProcess }: FileUploadProps) => {
           <UploadCloud className={`w-16 h-16 transition-transform duration-300 ${isDragActive || isDragging ? 'scale-110 text-primary' : 'text-muted-foreground'}`} />
           <h2 className="text-2xl font-bold font-headline">Drag & Drop your CSV file here</h2>
           <p className="text-muted-foreground">or click to select a file</p>
-          <p className="mt-4 text-xs text-muted-foreground">
+          <p className="text-muted-foreground">
             (.csv files up to 500MB are supported)
           </p>
         </div>
