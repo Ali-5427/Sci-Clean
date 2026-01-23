@@ -65,16 +65,56 @@ print("\\n--- Step 1: Converting data types ---")
 ${typeConversionSteps}
 print("Data type conversion complete.")
 
-# --- STEP 2: HANDLE MISSING DATA (Placeholder) ---
-# NOTE: This MVP version does not include imputation.
-# The following section is a placeholder for future functionality.
-print("\\n--- Step 2: Handling missing values (No imputation in this version) ---")
+# --- STEP 2: HANDLE MISSING VALUES (IMPUTATION) ---
+print("\\n--- Step 2: Handling missing values ---")
 missing_before = df.isnull().sum().sum()
 print(f"Total missing values before imputation: {missing_before}")
-# Example imputation (currently disabled):
-# if df['income'].isnull().sum() > 0:
-#     print(f"Imputing {df['income'].isnull().sum()} missing values in 'income' with mean...")
-#     df['income'] = df['income'].fillna(df['income'].mean())
+
+# The imputation strategy depends heavily on the nature of your data.
+# Common strategies are provided below. Uncomment the one that best fits your needs for each column.
+# Note: Imputation is done on a per-column basis.
+
+# --- Example Imputation Strategies ---
+# Choose the column you want to impute, for example 'age':
+# target_column_to_impute = 'age'
+
+# Strategy 1: Mean Imputation (for numeric data)
+# Good for normally distributed data. Can be skewed by outliers.
+# if target_column_to_impute in df.columns and df[target_column_to_impute].isnull().sum() > 0:
+#     print(f"Imputing missing '{target_column_to_impute}' values with the mean...")
+#     mean_value = df[target_column_to_impute].mean()
+#     df[target_column_to_impute].fillna(mean_value, inplace=True)
+
+# Strategy 2: Median Imputation (for numeric data)
+# More robust to outliers than the mean.
+# if target_column_to_impute in df.columns and df[target_column_to_impute].isnull().sum() > 0:
+#     print(f"Imputing missing '{target_column_to_impute}' values with the median...")
+#     median_value = df[target_column_to_impute].median()
+#     df[target_column_to_impute].fillna(median_value, inplace=True)
+
+# Strategy 3: Mode Imputation (for categorical data)
+# Good for filling in the most common category.
+# if target_column_to_impute in df.columns and df[target_column_to_impute].isnull().sum() > 0:
+#     print(f"Imputing missing '{target_column_to_impute}' values with the mode...")
+#     mode_value = df[target_column_to_impute].mode()[0]
+#     df[target_column_to_impute].fillna(mode_value, inplace=True)
+
+# Strategy 4: Forward-Fill (ffill) Imputation (for time-series or ordered data)
+# Propagates the last valid observation forward.
+# if target_column_to_impute in df.columns and df[target_column_to_impute].isnull().sum() > 0:
+#     print(f"Imputing missing '{target_column_to_impute}' values with forward-fill...")
+#     df[target_column_to_impute].fillna(method='ffill', inplace=True)
+
+# After imputation, you might still have missing values at the beginning of the file.
+# You can fill these with a specific value, like 0.
+# df.fillna(0, inplace=True)
+
+final_missing_values_after_imputation = df.isnull().sum().sum()
+if missing_before > 0:
+    imputed_count = missing_before - final_missing_values_after_imputation
+    if imputed_count > 0:
+        print(f"Imputed {imputed_count} missing values.")
+print(f"Total missing values after imputation step: {final_missing_values_after_imputation}")
 
 
 # --- STEP 3: SAVE CLEANED DATA ---
