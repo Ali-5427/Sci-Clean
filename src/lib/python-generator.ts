@@ -9,10 +9,14 @@ function getPandasTypeConversion(column: string, type: DataType): string {
         case 'TEXT':
             return `df[${safeCol}] = df[${safeCol}].astype(str).replace('nan', np.nan)`;
         case 'DATE':
-            // This is a generic date parser. For production, more robust format detection would be needed.
             return `df[${safeCol}] = pd.to_datetime(df[${safeCol}], errors='coerce')`;
         case 'CATEGORICAL':
             return `df[${safeCol}] = df[${safeCol}].astype('category')`;
+        case 'BOOLEAN':
+            return `
+boolean_map = {'true': True, 'yes': True, '1': True, 'false': False, 'no': False, '0': False}
+df[${safeCol}] = df[${safeCol}].str.lower().map(boolean_map).astype('boolean')
+`;
         default:
             return `# No conversion rule for type: ${type}`;
     }
@@ -71,8 +75,13 @@ print("\\n--- Step 2: Imputation (Forward Fill) ---")
 missing_before = df.isnull().sum().sum()
 # Forward-fill propagates the last valid observation forward.
 df.fillna(method='ffill', inplace=True)
-# Fill any remaining NaNs at the beginning of the file with 0
-df.fillna(0, inplace=True)
+# Fill any remaining NaNs at the beginning of the file with 0 or empty string
+for col in df.columns:
+    if pd.api.types.is_numeric_dtype(df[col]):
+        df[col].fillna(0, inplace=True)
+    else:
+        df[col].fillna('', inplace=True)
+
 imputed_count = missing_before - df.isnull().sum().sum()
 print(f"Imputed {imputed_count} missing values using Forward Fill strategy.")
 
@@ -86,8 +95,8 @@ numeric_cols = df.select_dtypes(include=np.number).columns
 for col in numeric_cols:
     # Ensure column has variance before calculating Z-scores
     if df[col].std() > 0:
-        z_scores = np.abs(stats.zscore(df[col]))
-        anomalies = np.where(z_scores > 3)[0]
+        z_scores = np.abs(stats.zscore(df[col].dropna()))
+        anomalies = df[col].index[df[col].isin(df[col].dropna()[z_scores > 3])]
         if len(anomalies) > 0:
             print(f"⚠️  Found {len(anomalies)} potential anomalies in '{col}' (Z-Score > 3)")
             df.loc[anomalies, 'is_anomaly'] = True

@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import type { ProcessedCsvData, AuditLogEntry, ConfirmedTypes, DataType, ColumnAnalysisResult } from '@/lib/types';
-import { inferAndConfirmColumnTypes } from '@/ai/flows/infer-and-confirm-column-types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Check, Bot, AlertTriangle, Hash, Type as TypeIcon, Calendar, Tags, CheckCircle2 } from 'lucide-react';
+import { Check, AlertTriangle, Hash, Type as TypeIcon, Calendar, Tags, CheckCircle2, ToggleRight } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 
 interface TypeInferencePanelProps {
@@ -24,24 +22,11 @@ const TypeIconComponent = ({ type }: { type: DataType }) => {
     case 'TEXT': return <TypeIcon className="w-4 h-4" />;
     case 'DATE': return <Calendar className="w-4 h-4" />;
     case 'CATEGORICAL': return <Tags className="w-4 h-4" />;
+    case 'BOOLEAN': return <ToggleRight className="w-4 h-4" />;
     default: return null;
   }
 };
 
-const TypeConfirmationCardSkeleton = () => (
-    <Card>
-      <CardHeader><Skeleton className="w-2/3 h-6" /></CardHeader>
-      <CardContent className="space-y-3">
-        <Skeleton className="w-1/2 h-4" />
-        <Skeleton className="w-full h-4" />
-        <Skeleton className="w-full h-4" />
-      </CardContent>
-      <CardFooter className="gap-2">
-        <Skeleton className="w-24 h-10" />
-        <Skeleton className="w-32 h-10" />
-      </CardFooter>
-    </Card>
-);
 
 const TypeConfirmationCard = ({
   column,
@@ -90,8 +75,8 @@ const TypeConfirmationCard = ({
         </CardTitle>
         <CardDescription className="flex items-center gap-2">
           {aiResult.confidence < 80 && !isConfirmed && <AlertTriangle className="w-4 h-4 text-yellow-400" />}
-          {aiResult.confidence < 80 && !isConfirmed ? 'Type Ambiguous' : 'AI Detected Type'}
-          (<Bot className="inline w-4 h-4"/> <span className={confidenceColor}>{aiResult.confidence}% sure</span>)
+          {aiResult.confidence < 80 && !isConfirmed ? 'Type Ambiguous' : 'Heuristically Detected Type'}
+           (<span className={confidenceColor}>{aiResult.confidence}% confidence</span>)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -119,7 +104,7 @@ const TypeConfirmationCard = ({
             <SelectValue placeholder="Change to..." />
           </SelectTrigger>
           <SelectContent>
-            {(['NUMERIC', 'TEXT', 'DATE', 'CATEGORICAL'] as DataType[]).map(type => (
+            {(['NUMERIC', 'TEXT', 'DATE', 'CATEGORICAL', 'BOOLEAN'] as DataType[]).map(type => (
               <SelectItem key={type} value={type}>{type}</SelectItem>
             ))}
           </SelectContent>
@@ -131,35 +116,68 @@ const TypeConfirmationCard = ({
 
 const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTypes }: TypeInferencePanelProps) => {
   const [analysisResults, setAnalysisResults] = useState<ColumnAnalysisResult[] | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
+
+  /**
+   * Replaces API calls with local, heuristic-based type inference for speed and reliability.
+   */
+  function inferTypeLocally(values: string[]): { detectedType: DataType, confidence: number } {
+    const validValues = values.filter(v => v !== null && v?.toString().trim() !== '');
+    if (validValues.length === 0) {
+      return { detectedType: 'TEXT', confidence: 20 };
+    }
+
+    const uniqueValues = new Set(validValues.map(v => v.toString().trim().toLowerCase()));
+    const uniqueCount = uniqueValues.size;
+
+    // Boolean check
+    const isBinary = (uniqueValues.has('true') && uniqueValues.has('false') && uniqueCount <= 2) ||
+                     (uniqueValues.has('yes') && uniqueValues.has('no') && uniqueCount <= 2) ||
+                     (uniqueValues.has('1') && uniqueValues.has('0') && validValues.every(v => ['1', '0'].includes(v)));
+    if (isBinary) {
+      return { detectedType: 'BOOLEAN', confidence: 95 };
+    }
+
+    // Numeric check
+    const areAllNumeric = validValues.every(v => {
+        const cleaned = v.toString().replace(/,/g, '');
+        return cleaned.trim() !== '' && !isNaN(Number(cleaned));
+    });
+    if (areAllNumeric) {
+      return { detectedType: 'NUMERIC', confidence: 98 };
+    }
+    
+    // Date check (simple)
+    const looksLikeDate = validValues.some(v => 
+        !isNaN(Date.parse(v)) && v.match(/[/\-]/) && v.length > 5
+    );
+    if (looksLikeDate) {
+        const allLookLikeDates = validValues.every(v => !isNaN(Date.parse(v)) && v.match(/[/\-]/));
+        if (allLookLikeDates) {
+            return { detectedType: 'DATE', confidence: 90 };
+        }
+    }
+
+    // Categorical check
+    if (uniqueCount <= 10 && uniqueCount / validValues.length < 0.6) {
+      return { detectedType: 'CATEGORICAL', confidence: 80 };
+    }
+    
+    return { detectedType: 'TEXT', confidence: 60 };
+  }
+
   useEffect(() => {
     if (!data?.columnProfiles?.length) return;
 
-    const runInference = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const input = {
-                columns: data.columnProfiles.map(p => ({
-                    columnName: p.name,
-                    sampleValues: p.sampleValues,
-                })),
-                fileSize: data.fileSize,
-                sparsityScore: data.sparsityScore,
-            };
-            const result = await inferAndConfirmColumnTypes(input);
-            setAnalysisResults(result.results);
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : String(err);
-            console.error("AI inference failed:", err);
-            setError(`AI Error: ${errorMessage}`);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    runInference();
+    const results = data.columnProfiles.map(profile => {
+        const { detectedType, confidence } = inferTypeLocally(profile.sampleValues);
+        return {
+            columnName: profile.name,
+            detectedType,
+            confidence
+        };
+    });
+    setAnalysisResults(results);
+
   }, [data]);
 
 
@@ -174,20 +192,6 @@ const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTyp
   const totalColumns = data.columnProfiles.length;
   const confirmedCount = Object.keys(confirmedTypes).length;
 
-  const PanelError = ({ error }: { error: string}) => (
-    <Card className="border-destructive/50 bg-destructive/10">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg font-headline text-destructive">
-            <AlertTriangle className="w-5 h-5"/> Analysis Failed
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-destructive/90 font-mono break-all">{error}</p>
-          <p className="mt-2 text-xs text-muted-foreground">This often indicates an issue with your API key, rate limits, or Google Cloud project configuration.</p>
-        </CardContent>
-      </Card>
-  );
-
   return (
     <Card className="flex flex-col h-full">
         <CardHeader>
@@ -196,15 +200,16 @@ const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTyp
                 <Badge variant="outline">{confirmedCount} / {totalColumns} Confirmed</Badge>
             </CardTitle>
             <CardDescription>
-                Review the AI-detected data types for each column. Your confirmations will be used to generate the cleaning script.
+                Review the heuristically-detected data types for each column. Your confirmations will be used to generate the cleaning script.
             </CardDescription>
         </CardHeader>
         <CardContent className="flex-1 p-0 overflow-y-hidden">
             <ScrollArea className="w-full h-full">
                 <div className="p-6 pt-0 pr-8 space-y-4">
-                    {isLoading && Array.from({ length: Math.min(totalColumns, 5) }).map((_, i) => <TypeConfirmationCardSkeleton key={i} />)}
-                    {error && <PanelError error={error} />}
-                    {!isLoading && !error && data.columnProfiles.map(col => {
+                    {!analysisResults && Array.from({ length: Math.min(totalColumns, 5) }).map((_, i) => (
+                      <p key={i} className="text-sm text-center text-muted-foreground">Analyzing types...</p>
+                    ))}
+                    {analysisResults && data.columnProfiles.map(col => {
                         const result = analysisResults?.find(r => r.columnName === col.name);
                         return (
                             <TypeConfirmationCard

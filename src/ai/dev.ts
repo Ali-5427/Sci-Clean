@@ -1,4 +1,5 @@
 import { config } from 'dotenv';
 config();
 
-import '@/ai/flows/infer-and-confirm-column-types.ts';
+// The infer-and-confirm-column-types flow is now handled locally in the UI.
+// import '@/ai/flows/infer-and-confirm-column-types.ts';
