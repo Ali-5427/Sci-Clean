@@ -12,12 +12,12 @@ async function realHash(file: File): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Research-Grade CSV Parser and Profiler with Active Cleaning
+// Research-Grade CSV Parser and Profiler
 function processCsvContent(
   fileName: string,
   fileSize: number,
   csvContent: string
-): Omit<ProcessedCsvData, 'fileHash' | 'processingTime' | 'anomaliesFound'> & { anomaliesFound: number } {
+): Omit<ProcessedCsvData, 'fileHash' | 'processingTime'> {
   const lines = csvContent.trim().split(/\r?\n/);
   if (lines.length < 2) {
     return {
@@ -27,46 +27,24 @@ function processCsvContent(
       columnCount: 0,
       columnProfiles: [],
       sparsityScore: 0,
-      anomaliesFound: 0,
     };
   }
 
   const header = lines[0].split(',').map(h => h.trim());
-  const dataRows = lines.slice(1).map(line => line.split(',').map(v => v.trim()));
+  const dataRows = lines.slice(1).map(line => line.split(','));
   const rowCount = dataRows.length;
   const columnCount = header.length;
 
-  // --- Active Cleaning Step 1: Auto-Imputation (Forward Fill) ---
-  for (let i = 0; i < rowCount; i++) {
-    for (let j = 0; j < columnCount; j++) {
-      const isMissing = dataRows[i][j] === '' || ['null', 'na', 'n/a'].includes(dataRows[i][j].toLowerCase());
-      if (isMissing) {
-        if (i > 0) {
-          dataRows[i][j] = dataRows[i - 1][j]; // Forward fill from row above
-        }
-      }
-    }
-  }
-  // Second pass: Fill any remaining missing values (e.g., in the first row) with 0
-  for (let i = 0; i < rowCount; i++) {
-    for (let j = 0; j < columnCount; j++) {
-       const isStillMissing = dataRows[i][j] === '' || ['null', 'na', 'n/a'].includes(dataRows[i][j].toLowerCase());
-       if(isStillMissing) {
-        dataRows[i][j] = '0';
-       }
-    }
-  }
-
-
-  // --- Profiling Step: Analyze the now-cleaned data ---
-  let totalMissing = 0; // This will be 0 after imputation, showing the result of cleaning
+  let totalMissing = 0;
   const columnProfiles: ColumnProfile[] = header.map((colName, colIndex) => {
     let missingCount = 0;
     const sampleValues: string[] = [];
 
     for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-      const value = dataRows[rowIndex][colIndex] || '';
-      if (value === '' || value.toLowerCase() === 'null' || value.toLowerCase() === 'na') {
+      // Ensure we don't go out of bounds if rows have inconsistent column counts
+      const value = (dataRows[rowIndex][colIndex] || '').trim();
+
+      if (value === '' || ['null', 'na', 'n/a'].includes(value.toLowerCase())) {
         missingCount++;
       } else if (sampleValues.length < 10) {
         sampleValues.push(value);
@@ -80,39 +58,12 @@ function processCsvContent(
       missingCount,
       missingPercentage: rowCount > 0 ? (missingCount / rowCount) * 100 : 0,
       sampleValues,
-      initialTypeGuess: 'TEXT',
+      initialTypeGuess: 'TEXT', // This is just a placeholder
     };
   });
 
   const totalCells = rowCount * columnCount;
   const sparsityScore = totalCells > 0 ? (totalMissing / totalCells) * 100 : 0;
-  
-  // --- Active Cleaning Step 2: Anomaly Detection (Z-Score) ---
-  let anomaliesFound = 0;
-  for (let j = 0; j < columnCount; j++) {
-    const numericValues: number[] = [];
-    for (let i = 0; i < rowCount; i++) {
-        const num = parseFloat(dataRows[i][j]);
-        if (!isNaN(num)) {
-            numericValues.push(num);
-        }
-    }
-
-    if(numericValues.length > 2) { // Need at least 3 points to calculate stdev meaningfully
-        const mean = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
-        const stdDev = Math.sqrt(numericValues.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / numericValues.length);
-
-        if (stdDev > 0) {
-            for(const value of numericValues) {
-                const zScore = (value - mean) / stdDev;
-                if (Math.abs(zScore) > 3) {
-                    anomaliesFound++;
-                }
-            }
-        }
-    }
-  }
-
 
   return {
     fileName,
@@ -121,7 +72,6 @@ function processCsvContent(
     columnCount,
     columnProfiles,
     sparsityScore,
-    anomaliesFound,
   };
 }
 
@@ -138,7 +88,7 @@ export function useCsvProcessor() {
     setProgress(0);
     const startTime = Date.now();
 
-    const animationDuration = 3000;
+    const animationDuration = 1500; // Faster animation
     const intervalTime = 50;
     const progressStep = 100 / (animationDuration / intervalTime);
 
@@ -167,12 +117,11 @@ export function useCsvProcessor() {
         const endTime = Date.now();
         const duration = (endTime - startTime) / 1000;
         
-        // This assertion is needed because we can't modify the central type in this step
         const finalData: ProcessedCsvData = {
             ...processedPart,
             fileHash,
             processingTime: duration,
-        } as ProcessedCsvData;
+        };
         
         return {
           finalData,
