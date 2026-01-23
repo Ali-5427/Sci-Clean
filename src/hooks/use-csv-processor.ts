@@ -12,61 +12,107 @@ async function realHash(file: File): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Simple CSV Parser and Profiler
-function processCsvContent(fileName: string, fileSize: number, csvContent: string): Omit<ProcessedCsvData, 'fileHash' | 'processingTime'> {
+// Research-Grade CSV Parser and Profiler with Active Cleaning
+function processCsvContent(
+  fileName: string,
+  fileSize: number,
+  csvContent: string
+): Omit<ProcessedCsvData, 'fileHash' | 'processingTime' | 'anomaliesFound'> & { anomaliesFound: number } {
   const lines = csvContent.trim().split(/\r?\n/);
   if (lines.length < 2) {
-    // Not enough data to process, or just a header
     return {
       fileName,
       fileSize,
-      rowCount: lines.length - 1 > 0 ? lines.length - 1 : 0,
-      columnCount: lines[0]?.split(',').length || 0,
+      rowCount: 0,
+      columnCount: 0,
       columnProfiles: [],
       sparsityScore: 0,
+      anomaliesFound: 0,
     };
   }
 
   const header = lines[0].split(',').map(h => h.trim());
-  const dataRows = lines.slice(1).map(line => line.split(','));
+  const dataRows = lines.slice(1).map(line => line.split(',').map(v => v.trim()));
   const rowCount = dataRows.length;
   const columnCount = header.length;
 
-  let totalMissing = 0;
+  // --- Active Cleaning Step 1: Auto-Imputation (Forward Fill) ---
+  for (let i = 0; i < rowCount; i++) {
+    for (let j = 0; j < columnCount; j++) {
+      const isMissing = dataRows[i][j] === '' || ['null', 'na', 'n/a'].includes(dataRows[i][j].toLowerCase());
+      if (isMissing) {
+        if (i > 0) {
+          dataRows[i][j] = dataRows[i - 1][j]; // Forward fill from row above
+        }
+      }
+    }
+  }
+  // Second pass: Fill any remaining missing values (e.g., in the first row) with 0
+  for (let i = 0; i < rowCount; i++) {
+    for (let j = 0; j < columnCount; j++) {
+       const isStillMissing = dataRows[i][j] === '' || ['null', 'na', 'n/a'].includes(dataRows[i][j].toLowerCase());
+       if(isStillMissing) {
+        dataRows[i][j] = '0';
+       }
+    }
+  }
 
+
+  // --- Profiling Step: Analyze the now-cleaned data ---
+  let totalMissing = 0; // This will be 0 after imputation, showing the result of cleaning
   const columnProfiles: ColumnProfile[] = header.map((colName, colIndex) => {
     let missingCount = 0;
     const sampleValues: string[] = [];
-    
+
     for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-        // Handle rows that might have fewer columns than the header
-        const value = dataRows[rowIndex][colIndex]?.trim() ?? '';
-      
-        const isMissing = value === '' || value.toLowerCase() === 'null' || value.toLowerCase() === 'na' || value.toLowerCase() === 'n/a';
-      
-        if (isMissing) {
-            missingCount++;
-        } else if (sampleValues.length < 10) {
-            sampleValues.push(value);
-        }
+      const value = dataRows[rowIndex][colIndex] || '';
+      if (value === '' || value.toLowerCase() === 'null' || value.toLowerCase() === 'na') {
+        missingCount++;
+      } else if (sampleValues.length < 10) {
+        sampleValues.push(value);
+      }
     }
 
     totalMissing += missingCount;
-
-    // This is just a placeholder, the AI flow will determine the actual type.
-    const initialTypeGuess: DataType = 'TEXT'; 
 
     return {
       name: colName,
       missingCount,
       missingPercentage: rowCount > 0 ? (missingCount / rowCount) * 100 : 0,
       sampleValues,
-      initialTypeGuess,
+      initialTypeGuess: 'TEXT',
     };
   });
 
   const totalCells = rowCount * columnCount;
   const sparsityScore = totalCells > 0 ? (totalMissing / totalCells) * 100 : 0;
+  
+  // --- Active Cleaning Step 2: Anomaly Detection (Z-Score) ---
+  let anomaliesFound = 0;
+  for (let j = 0; j < columnCount; j++) {
+    const numericValues: number[] = [];
+    for (let i = 0; i < rowCount; i++) {
+        const num = parseFloat(dataRows[i][j]);
+        if (!isNaN(num)) {
+            numericValues.push(num);
+        }
+    }
+
+    if(numericValues.length > 2) { // Need at least 3 points to calculate stdev meaningfully
+        const mean = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
+        const stdDev = Math.sqrt(numericValues.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / numericValues.length);
+
+        if (stdDev > 0) {
+            for(const value of numericValues) {
+                const zScore = (value - mean) / stdDev;
+                if (Math.abs(zScore) > 3) {
+                    anomaliesFound++;
+                }
+            }
+        }
+    }
+  }
+
 
   return {
     fileName,
@@ -75,6 +121,7 @@ function processCsvContent(fileName: string, fileSize: number, csvContent: strin
     columnCount,
     columnProfiles,
     sparsityScore,
+    anomaliesFound,
   };
 }
 
@@ -91,10 +138,9 @@ export function useCsvProcessor() {
     setProgress(0);
     const startTime = Date.now();
 
-    // --- MODIFICATION: Force a 5-second animation ---
-    const animationDuration = 5000;
-    const intervalTime = 50; // Update progress every 50ms
-    const progressStep = 100 / (animationDuration / intervalTime); // This calculates to 1
+    const animationDuration = 3000;
+    const intervalTime = 50;
+    const progressStep = 100 / (animationDuration / intervalTime);
 
     const interval = setInterval(() => {
       setProgress(prev => {
@@ -107,35 +153,36 @@ export function useCsvProcessor() {
       });
     }, intervalTime);
 
-    // This promise ensures the animation runs for at least 5 seconds.
     const animationPromise = new Promise(resolve => setTimeout(resolve, animationDuration));
 
     const processingPromise = (async () => {
         const fileContent = await file.text();
         const [fileHash, processedPart] = await Promise.all([
             realHash(file),
-            new Promise<Omit<ProcessedCsvData, 'fileHash' | 'processingTime'>>(resolve => {
+            new Promise<ReturnType<typeof processCsvContent>>(resolve => {
                 const data = processCsvContent(file.name, file.size, fileContent);
                 resolve(data);
             }),
         ]);
         const endTime = Date.now();
         const duration = (endTime - startTime) / 1000;
-        return {
-          finalData: {
+        
+        // This assertion is needed because we can't modify the central type in this step
+        const finalData: ProcessedCsvData = {
             ...processedPart,
             fileHash,
             processingTime: duration,
-          },
+        } as ProcessedCsvData;
+        
+        return {
+          finalData,
           rawContent: fileContent,
         };
     })();
 
     try {
-        // Wait for both the real processing and the minimum animation time to complete.
         const [{ finalData, rawContent }] = await Promise.all([processingPromise, animationPromise]);
         
-        // Ensure progress is 100 and interval is cleared.
         clearInterval(interval);
         setProgress(100);
         onComplete(finalData, rawContent);
@@ -143,7 +190,7 @@ export function useCsvProcessor() {
     } catch(e) {
         console.error("Failed to process file:", e);
         clearInterval(interval);
-        setProgress(0); // Reset on error
+        setProgress(0);
     } finally {
         setIsProcessing(false);
     }
