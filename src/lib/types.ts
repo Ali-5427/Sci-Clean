@@ -1,7 +1,5 @@
 'use server';
 
-import type { InferAndConfirmColumnTypesOutput } from '@/ai/flows/infer-and-confirm-column-types';
-
 export type DataType = 'NUMERIC' | 'TEXT' | 'DATE' | 'CATEGORICAL' | 'BOOLEAN';
 
 export interface ColumnProfile {
@@ -50,15 +48,11 @@ export interface ConfirmedTypes {
   [columnName: string]: ConfirmedType;
 }
 
-export type AIResult = {
-    results: {
-        columnName: string;
-        detectedType: DataType;
-        confidence: number;
-    }[]
-};
-
-export type ColumnAnalysisResult = AIResult['results'][0];
+export interface ColumnAnalysisResult {
+  columnName: string;
+  detectedType: DataType;
+  confidence: number;
+}
 
 export interface ChatMessage {
   role: 'user' | 'model';
