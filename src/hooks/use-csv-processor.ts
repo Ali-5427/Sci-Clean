@@ -84,7 +84,7 @@ export function useCsvProcessor() {
 
   const processFile = async (
     file: File,
-    onComplete: (data: ProcessedCsvData) => void
+    onComplete: (data: ProcessedCsvData, rawContent: string) => void
   ) => {
     setIsProcessing(true);
     setProgress(0);
@@ -121,20 +121,23 @@ export function useCsvProcessor() {
         const endTime = Date.now();
         const duration = (endTime - startTime) / 1000;
         return {
-          ...processedPart,
-          fileHash,
-          processingTime: duration,
+          finalData: {
+            ...processedPart,
+            fileHash,
+            processingTime: duration,
+          },
+          rawContent: fileContent,
         };
     })();
 
     try {
         // Wait for both the real processing and the minimum animation time to complete.
-        const [finalData] = await Promise.all([processingPromise, animationPromise]);
+        const [{ finalData, rawContent }] = await Promise.all([processingPromise, animationPromise]);
         
         // Ensure progress is 100 and interval is cleared.
         clearInterval(interval);
         setProgress(100);
-        onComplete(finalData);
+        onComplete(finalData, rawContent);
 
     } catch(e) {
         console.error("Failed to process file:", e);
