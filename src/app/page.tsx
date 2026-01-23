@@ -17,7 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 export default function Home() {
   const [appState, setAppState] = useState<AppState>('IDLE');
   const [processedData, setProcessedData] = useState<ProcessedCsvData | null>(null);
-  const [rawCsvContent, setRawCsvContent] = useState<string | null>(null);
+  const [cleanedData, setCleanedData] = useState<any[] | null>(null);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [confirmedTypes, setConfirmedTypes] = useState<ConfirmedTypes>({});
 
@@ -27,9 +27,9 @@ export default function Home() {
     setAppState('PROCESSING');
     addAuditLog('UPLOAD_START', { name: file.name, size: file.size });
 
-    processFile(file, (data, rawContent) => {
+    processFile(file, (data, cleaned) => {
       setProcessedData(data);
-      setRawCsvContent(rawContent);
+      setCleanedData(cleaned);
       setAppState('DASHBOARD');
       addAuditLog('UPLOAD_COMPLETE', {
         name: data.fileName,
@@ -40,6 +40,7 @@ export default function Home() {
         rows: data.rowCount,
         columns: data.columnCount,
         sparsity: data.sparsityScore,
+        anomalies: data.anomaliesFound,
       });
     });
   };
@@ -99,7 +100,7 @@ export default function Home() {
                   confirmedTypes={confirmedTypes}
                   disabled={!allTypesConfirmed}
                   addAuditLog={addAuditLog}
-                  rawCsvContent={rawCsvContent}
+                  cleanedData={cleanedData}
                 />
                 <ChatbotPanel processedData={processedData} />
               </div>

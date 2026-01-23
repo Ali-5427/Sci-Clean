@@ -27,7 +27,9 @@ const LogEntry = ({ entry }: { entry: AuditLogEntry }) => {
         switch(entry.action) {
             case 'UPLOAD_START': return `Upload started for ${entry.details.name}.`;
             case 'UPLOAD_COMPLETE': return `Uploaded: ${entry.details.name} (${(entry.details.size / 1024 / 1024).toFixed(2)} MB).`;
-            case 'ANALYSIS_COMPLETE': return `${entry.details.rows} rows, ${entry.details.columns} columns. Sparsity: ${entry.details.sparsity.toFixed(1)}%.`;
+            case 'ANALYSIS_COMPLETE': 
+                const anomalyText = entry.details.anomalies > 0 ? ` Found ${entry.details.anomalies} anomalies.` : '';
+                return `${entry.details.rows} rows, ${entry.details.columns} columns. Sparsity: ${entry.details.sparsity.toFixed(1)}%.${anomalyText}`;
             case 'TYPE_CONFIRMED': return `Confirmed '${entry.details.column}' as ${entry.details.type}.`;
             case 'EXPORT_SCRIPT': return `Python script exported.`;
             case 'EXPORT_CSV': return `Cleaned CSV exported.`;

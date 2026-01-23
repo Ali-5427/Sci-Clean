@@ -19,7 +19,7 @@ function processCsvContent(
   csvContent: string
 ): {
   profilingData: ProcessedCsvData;
-  cleanedCsvContent: string;
+  cleanedData: any[];
 } {
   const lines = csvContent.trim().split(/\r?\n/);
   if (lines.length < 2) {
@@ -31,9 +31,10 @@ function processCsvContent(
       columnProfiles: [],
       sparsityScore: 0,
       processingTime: 0,
-      fileHash: '', // Will be set later
+      fileHash: '',
+      anomaliesFound: 0,
     };
-    return { profilingData: emptyResult, cleanedCsvContent: '' };
+    return { profilingData: emptyResult, cleanedData: [] };
   }
 
   const header = lines[0].split(',').map(h => h.trim());
@@ -42,7 +43,7 @@ function processCsvContent(
   // --- PASS 0: Profile RAW data for dashboard ---
   const { columnProfiles: rawColumnProfiles, sparsityScore } = (() => {
       let totalMissing = 0;
-      const profiles: ColumnProfile[] = header.map((colName, colIndex) => {
+      const profiles: Omit<ColumnProfile, 'anomaliesInColumn'>[] = header.map((colName, colIndex) => {
         let missingCount = 0;
         const sampleValues: string[] = [];
         for (let rowIndex = 0; rowIndex < rawDataRows.length; rowIndex++) {
@@ -66,60 +67,58 @@ function processCsvContent(
       const score = totalCells > 0 ? (totalMissing / totalCells) * 100 : 0;
       return { columnProfiles: profiles, sparsityScore: score };
   })();
-
-  // --- PASS 1: IMPUTATION (Forward Fill on Numeric Columns) ---
+  
+  // --- PASS 1: Active Cleaning & Imputation (Forward Fill) ---
   const numericColumnIndices = new Set<number>();
-  if (rawDataRows.length > 0) {
+   if (rawDataRows.length > 0) {
       header.forEach((_, colIndex) => {
-          // Guess if a column is numeric by checking the first few non-empty values
           for (const row of rawDataRows) {
               const value = row[colIndex];
-              if (value && value.trim()) {
-                  if (!isNaN(Number(value))) {
-                      numericColumnIndices.add(colIndex);
-                  }
+              if (value && value.trim() && !isNaN(Number(value))) {
+                  numericColumnIndices.add(colIndex);
                   break;
               }
           }
       });
   }
 
-  const cleanedRows: string[][] = [];
   const lastValidValues: { [key: number]: string } = {};
-
-  rawDataRows.forEach(row => {
-    const newRow = [...row];
-    row.forEach((cell, colIndex) => {
+  const cleanedDataObjects = rawDataRows.map(row => {
+    const newRow: any = {};
+    header.forEach((h, colIndex) => {
+      const cell = row[colIndex];
       const isNumeric = numericColumnIndices.has(colIndex);
       const isMissing = cell === '' || ['null', 'na', 'n/a'].includes(cell.toLowerCase());
 
-      if (isMissing && isNumeric) {
-        newRow[colIndex] = lastValidValues[colIndex] !== undefined ? lastValidValues[colIndex] : '0';
+      if (isMissing) {
+        if(isNumeric) {
+          newRow[h] = lastValidValues[colIndex] !== undefined ? lastValidValues[colIndex] : '0';
+        } else {
+          newRow[h] = lastValidValues[colIndex] !== undefined ? lastValidValues[colIndex] : '';
+        }
+      } else {
+        newRow[h] = cell;
       }
       
       if (!isMissing) {
         lastValidValues[colIndex] = cell;
       }
     });
-    cleanedRows.push(newRow);
-  });
-  
-  const cleanedDataObjects: any[] = cleanedRows.map(row => {
-    const obj: any = {};
-    header.forEach((h, i) => obj[h] = row[i]);
-    return obj;
+    return newRow;
   });
 
   // --- PASS 2: ANOMALY DETECTION (Z-Score) ---
   let anomaliesFound = 0;
-  
+  const anomaliesPerColumn: { [key: string]: number } = {};
+  header.forEach(h => anomaliesPerColumn[h] = 0);
+
   numericColumnIndices.forEach(colIndex => {
     const colName = header[colIndex];
     const values = cleanedDataObjects.map(row => parseFloat(row[colName])).filter(v => !isNaN(v));
     
-    if (values.length > 1) {
+    if (values.length > 2) {
       const mean = values.reduce((a, b) => a + b, 0) / values.length;
-      const stdDev = Math.sqrt(values.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / values.length);
+      const stdDev = Math.sqrt(values.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / (values.length -1));
       
       if (stdDev > 0) {
         cleanedDataObjects.forEach(row => {
@@ -127,7 +126,11 @@ function processCsvContent(
           if (!isNaN(value)) {
             const zScore = (value - mean) / stdDev;
             if (Math.abs(zScore) > 3) {
+              if (!row._isAnomaly) {
+                  anomaliesFound++;
+              }
               row._isAnomaly = true;
+              anomaliesPerColumn[colName] = (anomaliesPerColumn[colName] || 0) + 1;
             }
           }
         });
@@ -135,34 +138,25 @@ function processCsvContent(
     }
   });
 
-  cleanedDataObjects.forEach(row => {
-    if (row._isAnomaly) {
-      anomaliesFound++;
-    }
-  });
-
   // --- FINAL PREPARATION ---
+  const finalColumnProfiles: ColumnProfile[] = rawColumnProfiles.map(p => ({
+      ...p,
+      anomaliesInColumn: anomaliesPerColumn[p.name] || 0,
+  }));
+
   const profilingData: ProcessedCsvData = {
     fileName,
     fileSize,
     rowCount: rawDataRows.length,
     columnCount: header.length,
-    columnProfiles: rawColumnProfiles,
+    columnProfiles: finalColumnProfiles,
     sparsityScore,
-    anomaliesFound, // Add the new metric
+    anomaliesFound,
     processingTime: 0, // will be calculated in the hook
     fileHash: '', // will be calculated in the hook
   };
-
-  const cleanedCsvContent = [
-    header.join(','),
-    ...cleanedDataObjects.map(row => {
-      // Exclude _isAnomaly flag from the final CSV
-      return header.map(h => row[h]).join(',');
-    })
-  ].join('\n');
   
-  return { profilingData, cleanedCsvContent };
+  return { profilingData, cleanedData: cleanedDataObjects };
 }
 
 
@@ -172,7 +166,7 @@ export function useCsvProcessor() {
 
   const processFile = async (
     file: File,
-    onComplete: (data: ProcessedCsvData, cleanedContent: string) => void
+    onComplete: (data: ProcessedCsvData, cleanedData: any[]) => void
   ) => {
     setIsProcessing(true);
     setProgress(0);
@@ -180,7 +174,7 @@ export function useCsvProcessor() {
 
     const fileContent = await file.text();
 
-    const [fileHash, { profilingData, cleanedCsvContent }] = await Promise.all([
+    const [fileHash, { profilingData, cleanedData }] = await Promise.all([
       realHash(file),
       new Promise<ReturnType<typeof processCsvContent>>(resolve => {
         const result = processCsvContent(file.name, file.size, fileContent);
@@ -195,7 +189,7 @@ export function useCsvProcessor() {
     
     setIsProcessing(false);
     setProgress(100);
-    onComplete(profilingData, cleanedCsvContent);
+    onComplete(profilingData, cleanedData);
   };
 
   return { progress, isProcessing, processFile };

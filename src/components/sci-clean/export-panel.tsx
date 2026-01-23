@@ -1,7 +1,7 @@
 'use client';
 
 import { generatePythonScript } from '@/lib/python-generator';
-import type { ProcessedCsvData, ConfirmedTypes, AuditLogEntry, DataType } from '@/lib/types';
+import type { ProcessedCsvData, ConfirmedTypes, AuditLogEntry } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, Copy, FileCheck2 } from 'lucide-react';
@@ -12,10 +12,10 @@ interface ExportPanelProps {
   confirmedTypes: ConfirmedTypes;
   disabled: boolean;
   addAuditLog: (action: AuditLogEntry['action'], details: any) => void;
-  rawCsvContent: string | null;
+  cleanedData: any[] | null;
 }
 
-const ExportPanel = ({ processedData, confirmedTypes, disabled, addAuditLog, rawCsvContent }: ExportPanelProps) => {
+const ExportPanel = ({ processedData, confirmedTypes, disabled, addAuditLog, cleanedData }: ExportPanelProps) => {
   const { toast } = useToast();
 
   const handleDownloadScript = () => {
@@ -44,51 +44,28 @@ const ExportPanel = ({ processedData, confirmedTypes, disabled, addAuditLog, raw
   };
 
   const handleDownloadCsv = () => {
-    if (!rawCsvContent) {
-      toast({ title: "Error", description: "CSV content not available to generate cleaned file.", variant: "destructive" });
+    if (!cleanedData || cleanedData.length === 0) {
+      toast({ title: "Error", description: "Cleaned data is not available to download.", variant: "destructive" });
       return;
     }
 
-    const applyTypeConversion = (value: string, type: DataType | undefined): string => {
-      const trimmedValue = value.trim();
-      if (['', 'null', 'na', 'n/a'].includes(trimmedValue.toLowerCase())) {
-        return '';
-      }
-      if (!type) {
-        return trimmedValue;
-      }
-
-      switch (type) {
-        case 'NUMERIC':
-          const num = parseFloat(trimmedValue.replace(/,/g, ''));
-          return isNaN(num) ? '' : String(num);
-        case 'DATE':
-          const date = new Date(trimmedValue);
-          return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : '';
-        case 'TEXT':
-        case 'CATEGORICAL':
-          return trimmedValue.includes(',') ? `"${trimmedValue}"` : trimmedValue;
-        default:
-          return trimmedValue;
-      }
-    };
-
     try {
-      const lines = rawCsvContent.trim().split(/\r?\n/);
-      const header = lines[0].split(',').map(h => h.trim());
-      const columnTypeMap: (DataType | undefined)[] = header.map(h => confirmedTypes[h]?.type);
-
-      const cleanedRows = lines.slice(1).map(line => {
-        if (!line.trim()) return null;
-        const values = line.split(',');
-        return header.map((_, index) => {
-          const value = values[index] || '';
-          const type = columnTypeMap[index];
-          return applyTypeConversion(value, type);
-        }).join(',');
-      }).filter(row => row !== null);
-
-      const cleanedCsv = [header.join(','), ...cleanedRows].join('\n');
+      const headers = processedData.columnProfiles.map(p => p.name);
+      const csvRows = [
+        headers.join(','),
+        ...cleanedData.map(row => {
+          return headers.map(header => {
+            const value = row[header];
+            // Handle values that might contain commas
+            if (typeof value === 'string' && value.includes(',')) {
+              return `"${value}"`;
+            }
+            return value;
+          }).join(',');
+        })
+      ];
+      
+      const cleanedCsv = csvRows.join('\n');
       const blob = new Blob([cleanedCsv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -123,7 +100,7 @@ const ExportPanel = ({ processedData, confirmedTypes, disabled, addAuditLog, raw
         <Button onClick={handleCopyToClipboard} disabled={disabled} variant="secondary" className="w-full gap-2">
           <Copy className="w-4 h-4" /> Copy Python to Clipboard
         </Button>
-        <Button onClick={handleDownloadCsv} disabled={disabled || !rawCsvContent} variant="outline" className="w-full gap-2">
+        <Button onClick={handleDownloadCsv} disabled={disabled || !cleanedData} variant="outline" className="w-full gap-2">
           <FileCheck2 className="w-4 h-4" /> Download Cleaned .csv
         </Button>
         {!disabled && <p className="mt-2 text-xs text-center text-muted-foreground">Original File Hash: <span className="font-mono">{processedData.fileHash.substring(0,16)}...</span></p>}

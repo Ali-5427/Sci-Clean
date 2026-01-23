@@ -1,3 +1,5 @@
+'use server';
+
 import type { InferAndConfirmColumnTypesOutput } from '@/ai/flows/infer-and-confirm-column-types';
 
 export type DataType = 'NUMERIC' | 'TEXT' | 'DATE' | 'CATEGORICAL';
@@ -8,6 +10,7 @@ export interface ColumnProfile {
   missingPercentage: number;
   sampleValues: string[];
   initialTypeGuess: DataType;
+  anomaliesInColumn: number;
 }
 
 export interface ProcessedCsvData {
@@ -19,6 +22,7 @@ export interface ProcessedCsvData {
   columnProfiles: ColumnProfile[];
   sparsityScore: number;
   processingTime: number; // in seconds
+  anomaliesFound: number;
 }
 
 export interface AuditLogEntry {
