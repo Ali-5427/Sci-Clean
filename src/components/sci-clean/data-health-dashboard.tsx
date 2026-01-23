@@ -13,10 +13,10 @@ interface DataHealthDashboardProps {
   data: ProcessedCsvData;
 }
 
-const SparsityScoreCard = ({ score, anomalies }: { score: number, anomalies: number }) => {
+const SparsityScoreCard = ({ score, anomalies, columnProfiles }: { score: number, anomalies: number, columnProfiles: ColumnProfile[] }) => {
   const scoreColor = score > 25 ? 'text-red-400' : score > 10 ? 'text-yellow-400' : 'text-green-400';
   const scoreBg = score > 25 ? 'bg-red-900/50' : score > 10 ? 'bg-yellow-900/50' : 'bg-green-900/50';
-  const totalWarnings = anomalies + (data.columnProfiles.reduce((acc, p) => acc + p.warnings.length, 0));
+  const totalWarnings = anomalies + (columnProfiles.reduce((acc, p) => acc + p.warnings.length, 0));
 
   return (
     <Card className={scoreBg}>
@@ -144,7 +144,7 @@ const ColumnHealthTable = ({ columns }: { columns: ProcessedCsvData['columnProfi
 const DataHealthDashboard = ({ data }: DataHealthDashboardProps) => {
   return (
     <div className="space-y-6">
-      <SparsityScoreCard score={data.sparsityScore} anomalies={data.anomaliesFound} />
+      <SparsityScoreCard score={data.sparsityScore} anomalies={data.anomaliesFound} columnProfiles={data.columnProfiles} />
       <SummaryStats data={data} />
       <ColumnHealthTable columns={data.columnProfiles} />
       <MissingnessHeatmap columns={data.columnProfiles} />
