@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -146,15 +147,19 @@ const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTyp
       return { detectedType: 'NUMERIC', confidence: 98 };
     }
     
-    // Date check (simple)
-    const looksLikeDate = validValues.some(v => 
-        !isNaN(Date.parse(v)) && v.match(/[/\-]/) && v.length > 5
-    );
-    if (looksLikeDate) {
-        const allLookLikeDates = validValues.every(v => !isNaN(Date.parse(v)) && v.match(/[/\-]/));
-        if (allLookLikeDates) {
-            return { detectedType: 'DATE', confidence: 90 };
+    // Date check (stricter)
+    const isDate = (v: string) => {
+        // Rule 3: Exclude common ID patterns
+        if (/^(sub|id|pat)/i.test(v.trim())) {
+            return false;
         }
+        // Rule 1 & 2: Parsable and contains a year-like number
+        return !isNaN(Date.parse(v)) && /(19|20)\d{2}/.test(v);
+    };
+
+    const dateLikeCount = validValues.filter(isDate).length;
+    if (dateLikeCount / validValues.length > 0.7) { // If > 70% of values look like dates
+        return { detectedType: 'DATE', confidence: 90 };
     }
 
     // Categorical check

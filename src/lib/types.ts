@@ -1,3 +1,4 @@
+
 'use server';
 
 export type DataType = 'NUMERIC' | 'TEXT' | 'DATE' | 'CATEGORICAL' | 'BOOLEAN';
@@ -9,6 +10,7 @@ export interface ColumnProfile {
   sampleValues: string[];
   initialTypeGuess: DataType;
   anomaliesInColumn: number;
+  warnings: string[];
 }
 
 export interface ProcessedCsvData {

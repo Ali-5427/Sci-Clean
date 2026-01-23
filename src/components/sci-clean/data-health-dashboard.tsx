@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ProcessedCsvData, ColumnProfile } from '@/lib/types';
@@ -15,6 +16,7 @@ interface DataHealthDashboardProps {
 const SparsityScoreCard = ({ score, anomalies }: { score: number, anomalies: number }) => {
   const scoreColor = score > 25 ? 'text-red-400' : score > 10 ? 'text-yellow-400' : 'text-green-400';
   const scoreBg = score > 25 ? 'bg-red-900/50' : score > 10 ? 'bg-yellow-900/50' : 'bg-green-900/50';
+  const totalWarnings = anomalies + (data.columnProfiles.reduce((acc, p) => acc + p.warnings.length, 0));
 
   return (
     <Card className={scoreBg}>
@@ -24,10 +26,10 @@ const SparsityScoreCard = ({ score, anomalies }: { score: number, anomalies: num
       <CardContent className="text-center">
         <p className={`text-6xl font-bold ${scoreColor}`}>{score.toFixed(1)}%</p>
         <p className="text-muted-foreground">of cells are missing data</p>
-        {anomalies > 0 && (
+        {totalWarnings > 0 && (
             <div className="flex items-center justify-center gap-2 mt-2 text-red-400">
                 <AlertTriangle className="w-4 h-4" />
-                <p>{anomalies} potential anomal{anomalies > 1 ? 'ies' : 'y'} found</p>
+                <p>{totalWarnings} potential issue{totalWarnings > 1 ? 's' : ''} found</p>
             </div>
         )}
       </CardContent>
@@ -67,13 +69,20 @@ const SummaryStats = ({ data }: { data: ProcessedCsvData }) => {
   );
 };
 
-const MissingDataTable = ({ columns }: { columns: ProcessedCsvData['columnProfiles'] }) => {
+const ColumnHealthTable = ({ columns }: { columns: ProcessedCsvData['columnProfiles'] }) => {
   const getStatus = (col: ColumnProfile) => {
-    if (col.anomaliesInColumn > 0) {
+    if (col.warnings.length > 0) {
       return { 
         icon: <AlertTriangle className="text-red-400" />, 
-        label: `${col.anomaliesInColumn} Anomal${col.anomaliesInColumn > 1 ? 'ies' : 'y'}`,
+        label: col.warnings.join(', '),
         className: 'bg-red-900/50'
+      };
+    }
+    if (col.anomaliesInColumn > 0) {
+      return { 
+        icon: <AlertTriangle className="text-yellow-400" />, 
+        label: `${col.anomaliesInColumn} Outlier${col.anomaliesInColumn > 1 ? 's' : ''}`,
+        className: 'bg-yellow-900/50'
       };
     }
     if (col.missingPercentage > 0) {
@@ -137,7 +146,7 @@ const DataHealthDashboard = ({ data }: DataHealthDashboardProps) => {
     <div className="space-y-6">
       <SparsityScoreCard score={data.sparsityScore} anomalies={data.anomaliesFound} />
       <SummaryStats data={data} />
-      <MissingDataTable columns={data.columnProfiles} />
+      <ColumnHealthTable columns={data.columnProfiles} />
       <MissingnessHeatmap columns={data.columnProfiles} />
     </div>
   );
