@@ -193,16 +193,16 @@ export function useCsvProcessor() {
     const BIG_FILE_THRESHOLD = 5 * 1024 * 1024; // 5MB
     const simulationDuration = file.size < BIG_FILE_THRESHOLD ? 3000 : 5000;
 
-    const actualProcessingPromise = (async () => {
-        const fileContent = await file.text();
-        const [fileHash, { profilingData, cleanedData }] = await Promise.all([
-            realHash(file),
-            Promise.resolve(processCsvContent(file.name, file.size, fileContent)),
+    const doActualProcessing = async () => {
+        const [fileContent, fileHash] = await Promise.all([
+            file.text(),
+            realHash(file)
         ]);
-        
+
+        const { profilingData, cleanedData } = processCsvContent(file.name, file.size, fileContent);
         profilingData.fileHash = fileHash;
         return { profilingData, cleanedData };
-    })();
+    };
 
     const simulatedProgressPromise = new Promise<void>(resolve => {
         let currentProgress = 0;
@@ -222,7 +222,7 @@ export function useCsvProcessor() {
 
     const [_, { profilingData, cleanedData }] = await Promise.all([
         simulatedProgressPromise,
-        actualProcessingPromise
+        doActualProcessing()
     ]);
 
     const endTime = Date.now();
