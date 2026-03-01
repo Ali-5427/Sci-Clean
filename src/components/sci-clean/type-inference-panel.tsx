@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -118,9 +117,6 @@ const TypeConfirmationCard = ({
 const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTypes }: TypeInferencePanelProps) => {
   const [analysisResults, setAnalysisResults] = useState<ColumnAnalysisResult[] | null>(null);
 
-  /**
-   * Replaces API calls with local, heuristic-based type inference for speed and reliability.
-   */
   function inferTypeLocally(values: string[]): { detectedType: DataType, confidence: number } {
     const validValues = values.filter(v => v !== null && v?.toString().trim() !== '');
     if (validValues.length === 0) {
@@ -130,7 +126,6 @@ const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTyp
     const uniqueValues = new Set(validValues.map(v => v.toString().trim().toLowerCase()));
     const uniqueCount = uniqueValues.size;
 
-    // Boolean check
     const isBinary = (uniqueValues.has('true') && uniqueValues.has('false') && uniqueCount <= 2) ||
                      (uniqueValues.has('yes') && uniqueValues.has('no') && uniqueCount <= 2) ||
                      (uniqueValues.has('1') && uniqueValues.has('0') && validValues.every(v => ['1', '0'].includes(v)));
@@ -138,7 +133,6 @@ const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTyp
       return { detectedType: 'BOOLEAN', confidence: 95 };
     }
 
-    // Numeric check
     const areAllNumeric = validValues.every(v => {
         const cleaned = v.toString().replace(/,/g, '');
         return cleaned.trim() !== '' && !isNaN(Number(cleaned));
@@ -147,22 +141,18 @@ const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTyp
       return { detectedType: 'NUMERIC', confidence: 98 };
     }
     
-    // Date check (stricter)
     const isDate = (v: string) => {
-        // Rule 3: Exclude common ID patterns
         if (/^(sub|id|pat)/i.test(v.trim())) {
             return false;
         }
-        // Rule 1 & 2: Parsable and contains a year-like number
         return !isNaN(Date.parse(v)) && /(19|20)\d{2}/.test(v);
     };
 
     const dateLikeCount = validValues.filter(isDate).length;
-    if (dateLikeCount / validValues.length > 0.7) { // If > 70% of values look like dates
+    if (dateLikeCount / validValues.length > 0.7) {
         return { detectedType: 'DATE', confidence: 90 };
     }
 
-    // Categorical check
     if (uniqueCount <= 10 && uniqueCount / validValues.length < 0.6) {
       return { detectedType: 'CATEGORICAL', confidence: 80 };
     }
@@ -198,21 +188,23 @@ const TypeInferencePanel = ({ data, addAuditLog, confirmedTypes, setConfirmedTyp
   const confirmedCount = Object.keys(confirmedTypes).length;
 
   return (
-    <Card className="flex flex-col h-full">
-        <CardHeader>
+    <Card className="flex flex-col h-full border-none shadow-none bg-transparent">
+        <CardHeader className="shrink-0 pb-4">
             <CardTitle className="flex items-center justify-between text-2xl font-headline">
                 <span>Confirm Column Types</span>
-                <Badge variant="outline">{confirmedCount} / {totalColumns} Confirmed</Badge>
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                  {confirmedCount} / {totalColumns} Confirmed
+                </Badge>
             </CardTitle>
             <CardDescription>
                 Review the heuristically-detected data types for each column. Your confirmations will be used to generate the cleaning script.
             </CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 p-0 overflow-y-hidden">
-            <ScrollArea className="w-full h-full">
-                <div className="p-6 pt-0 pr-8 space-y-4">
+        <CardContent className="flex-1 overflow-hidden p-0">
+            <ScrollArea className="h-full w-full">
+                <div className="p-6 pt-0 space-y-4 pr-4">
                     {!analysisResults && Array.from({ length: Math.min(totalColumns, 5) }).map((_, i) => (
-                      <p key={i} className="text-sm text-center text-muted-foreground">Analyzing types...</p>
+                      <p key={i} className="text-sm text-center text-muted-foreground animate-pulse">Analyzing types...</p>
                     ))}
                     {analysisResults && data.columnProfiles.map(col => {
                         const result = analysisResults?.find(r => r.columnName === col.name);

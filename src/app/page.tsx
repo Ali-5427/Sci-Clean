@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -80,11 +79,11 @@ export default function Home() {
       case 'DASHBOARD':
         if (!processedData) return null;
         return (
-          <div className="grid h-full grid-cols-1 gap-6 p-4 md:grid-cols-12 lg:p-6">
-            <div className="md:col-span-12 lg:col-span-3">
+          <div className="grid h-full grid-cols-1 gap-6 p-4 md:grid-cols-12 lg:p-6 overflow-hidden">
+            <div className="md:col-span-12 lg:col-span-3 h-full overflow-y-auto pr-2">
               <DataHealthDashboard data={processedData} />
             </div>
-            <div className="flex flex-col md:col-span-7 lg:col-span-6">
+            <div className="flex flex-col md:col-span-7 lg:col-span-6 h-full overflow-hidden">
               <TypeInferencePanel
                 data={processedData}
                 addAuditLog={addAuditLog}
@@ -92,7 +91,7 @@ export default function Home() {
                 setConfirmedTypes={setConfirmedTypes}
               />
             </div>
-            <div className="md:col-span-5 lg:col-span-3">
+            <div className="md:col-span-5 lg:col-span-3 h-full overflow-y-auto pr-2">
               <div className="flex flex-col gap-6">
                 <AuditLog log={auditLog} />
                 <ExportPanel
@@ -129,10 +128,10 @@ export default function Home() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
+    <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
       <Header />
-      <main className="flex flex-col flex-1">
-        <div className="p-4 border-b border-border bg-card/50">
+      <main className="flex flex-col flex-1 overflow-hidden">
+        <div className="p-4 border-b border-border bg-card/50 shrink-0">
           <Card className="max-w-4xl mx-auto bg-transparent border-none shadow-none">
             <CardContent className="p-2">
               <div className="flex items-center justify-between">
@@ -166,7 +165,7 @@ export default function Home() {
           </Card>
         </div>
 
-        <div className="flex-1">{renderContent()}</div>
+        <div className="flex-1 overflow-hidden">{renderContent()}</div>
       </main>
     </div>
   );
