@@ -34,6 +34,10 @@ export type ChatWithContextInput = z.infer<typeof ChatWithContextInputSchema>;
 export async function chatWithContext(input: ChatWithContextInput): Promise<string> {
   const {messages, csvContext} = input;
   
+  if (!messages || messages.length === 0) {
+    return "I didn't receive any messages to process.";
+  }
+
   const systemPrompt = `You are an expert data science assistant integrated into a data cleaning application called Sci-Clean Studio. Your primary role is to answer questions about the CSV file the user has just uploaded. You have access to the file's metadata. Be helpful, concise, and use a friendly, professional tone. If the user asks a question that is not related to the provided data context, answer it as a general AI assistant.
 
 **PROVIDED DATA CONTEXT:**
@@ -45,18 +49,25 @@ export async function chatWithContext(input: ChatWithContextInput): Promise<stri
 
 Based on this context, answer the user's latest question.`;
   
-  // Convert our ChatMessage format to Genkit's Message[] format for the history
-  // Genkit 1.x history should not include the very last user message if it's being used as the main prompt,
-  // but here we can just pass the whole thing as history and no prompt.
-  const history: Message[] = messages.map((m) => ({
+  // Genkit 1.x best practice: separate the history from the current user prompt
+  const historyMessages = messages.slice(0, -1);
+  const lastUserMessage = messages[messages.length - 1].content;
+
+  const history: Message[] = historyMessages.map((m) => ({
     role: m.role as 'user' | 'model',
     content: [{text: m.content}]
   }));
 
-  const response = await ai.generate({
-    system: systemPrompt,
-    history: history,
-  });
+  try {
+    const response = await ai.generate({
+      system: systemPrompt,
+      history: history,
+      prompt: lastUserMessage,
+    });
 
-  return response.text;
+    return response.text;
+  } catch (error) {
+    console.error("Genkit generate error:", error);
+    throw new Error("Failed to generate a response. Please ensure your GOOGLE_GENAI_API_KEY is set correctly in your environment.");
+  }
 }
