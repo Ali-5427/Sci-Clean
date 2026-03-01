@@ -50,7 +50,9 @@ const ChatbotPanel = ({ processedData }: ChatbotPanelProps) => {
          It contains ${processedData.rowCount.toLocaleString()} rows and ${processedData.columnCount} columns. 
          Overall, about ${processedData.sparsityScore.toFixed(2)}% of the data is missing. 
          We've flagged ${processedData.anomaliesFound} potential anomalies across the dataset.
-         Key columns include: ${processedData.columnProfiles.map(p => `${p.name} (${p.missingPercentage.toFixed(1)}% missing)`).join(', ')}.`
+         
+         COLUMN DETAILS:
+         ${processedData.columnProfiles.map(p => `- ${p.name}: ${p.missingCount.toLocaleString()} missing (${p.missingPercentage.toFixed(2)}%), detected type: ${p.initialTypeGuess}, anomalies: ${p.anomaliesInColumn}`).join('\n')}`
       : "The user hasn't uploaded a file yet. Please encourage them to drag and drop a CSV to get started.";
 
     try {
