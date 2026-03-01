@@ -10,8 +10,6 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import {Message} from 'genkit/generate';
-import { ChatMessage } from '@/lib/types';
-
 
 const ChatMessageSchema = z.object({
     role: z.enum(['user', 'model']),
@@ -47,9 +45,11 @@ export async function chatWithContext(input: ChatWithContextInput): Promise<stri
 
 Based on this context, answer the user's latest question.`;
   
-  // Convert our ChatMessage format to Genkit's Message[] format
-  const history: Message[] = messages.map((m: ChatMessage) => ({
-    role: m.role,
+  // Convert our ChatMessage format to Genkit's Message[] format for the history
+  // Genkit 1.x history should not include the very last user message if it's being used as the main prompt,
+  // but here we can just pass the whole thing as history and no prompt.
+  const history: Message[] = messages.map((m) => ({
+    role: m.role as 'user' | 'model',
     content: [{text: m.content}]
   }));
 

@@ -101,7 +101,6 @@ export default function Home() {
                   addAuditLog={addAuditLog}
                   cleanedData={cleanedData}
                 />
-                <ChatbotPanel processedData={processedData} />
               </div>
             </div>
           </div>
@@ -128,7 +127,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
+    <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden relative">
       <Header />
       <main className="flex flex-col flex-1 overflow-hidden">
         <div className="p-4 border-b border-border bg-card/50 shrink-0">
@@ -167,6 +166,13 @@ export default function Home() {
 
         <div className="flex-1 overflow-hidden">{renderContent()}</div>
       </main>
+
+      {/* Floating Data Assistant Button and Panel */}
+      {processedData && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <ChatbotPanel processedData={processedData} />
+        </div>
+      )}
     </div>
   );
 }
