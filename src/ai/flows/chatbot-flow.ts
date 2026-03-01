@@ -7,15 +7,16 @@
 
 import Groq from "groq-sdk";
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
-
 export async function chatWithContext(input: {
   message: string;
   history: { role: 'user' | 'assistant'; content: string }[];
   context?: string;
 }): Promise<string> {
+  // Initialize inside the function to ensure process.env is ready
+  const groq = new Groq({
+    apiKey: process.env.GROQ_API_KEY,
+  });
+
   try {
     const completion = await groq.chat.completions.create({
       messages: [
@@ -36,7 +37,7 @@ Data Context for the current session:
 ${input.context || "No file has been uploaded yet."}`,
         },
         ...input.history.map(msg => ({
-          role: msg.role,
+          role: msg.role === 'assistant' ? 'assistant' : 'user',
           content: msg.content
         })),
         {
@@ -45,7 +46,7 @@ ${input.context || "No file has been uploaded yet."}`,
         },
       ],
       model: "llama-3.3-70b-versatile",
-      temperature: 0.7, // Added a bit of creativity for a more human feel
+      temperature: 0.7,
     });
 
     return completion.choices[0]?.message?.content || "I'm sorry, I couldn't quite process that. Could you try rephrasing?";
