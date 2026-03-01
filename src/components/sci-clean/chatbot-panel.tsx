@@ -45,7 +45,6 @@ const ChatbotPanel = ({ processedData }: ChatbotPanelProps) => {
     setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
-    // Create a more "narrative" context for the AI to sound more human
     const context = processedData 
       ? `The user has uploaded a file named "${processedData.fileName}". 
          It contains ${processedData.rowCount.toLocaleString()} rows and ${processedData.columnCount} columns. 
@@ -72,7 +71,7 @@ const ChatbotPanel = ({ processedData }: ChatbotPanelProps) => {
   };
 
   return (
-    <Sheet>
+    <Sheet modal={false}>
       <SheetTrigger asChild>
         <Button 
           size="icon" 
@@ -81,7 +80,7 @@ const ChatbotPanel = ({ processedData }: ChatbotPanelProps) => {
           <MessageSquare className="w-6 h-6" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-[400px] sm:w-[540px] p-0 flex flex-col border-l border-primary/20">
+      <SheetContent side="right" className="w-[400px] sm:w-[500px] p-0 flex flex-col pointer-events-auto">
         <SheetHeader className="p-6 border-b bg-card/50">
           <SheetTitle className="flex items-center gap-2 text-xl font-headline">
             <Sparkles className="w-6 h-6 text-primary" />
