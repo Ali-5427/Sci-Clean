@@ -9,6 +9,7 @@ import DataHealthDashboard from '@/components/sci-clean/data-health-dashboard';
 import TypeInferencePanel from '@/components/sci-clean/type-inference-panel';
 import AuditLog from '@/components/sci-clean/audit-log';
 import ExportPanel from '@/components/sci-clean/export-panel';
+import ChatbotPanel from '@/components/sci-clean/chatbot-panel';
 import { useCsvProcessor } from '@/hooks/use-csv-processor';
 import { FileCheck2, ListChecks, UploadCloud } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -165,6 +166,9 @@ export default function Home() {
         </div>
 
         <div className="flex-1 overflow-hidden">{renderContent()}</div>
+        
+        {/* Floating Chatbot */}
+        {appState === 'DASHBOARD' && <ChatbotPanel processedData={processedData} />}
       </main>
     </div>
   );
