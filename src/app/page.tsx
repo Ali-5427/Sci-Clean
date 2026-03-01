@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -8,9 +9,8 @@ import DataHealthDashboard from '@/components/sci-clean/data-health-dashboard';
 import TypeInferencePanel from '@/components/sci-clean/type-inference-panel';
 import AuditLog from '@/components/sci-clean/audit-log';
 import ExportPanel from '@/components/sci-clean/export-panel';
-import ChatbotPanel from '@/components/sci-clean/chatbot-panel';
 import { useCsvProcessor } from '@/hooks/use-csv-processor';
-import { Bot, FileCheck2, ListChecks, UploadCloud } from 'lucide-react';
+import { FileCheck2, ListChecks, UploadCloud } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function Home() {
@@ -64,7 +64,7 @@ export default function Home() {
         return (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
             <div className="flex items-center gap-4 p-8 border-2 border-dashed rounded-lg border-primary/50 bg-card">
-              <Bot className="w-12 h-12 text-primary animate-pulse" />
+              <UploadCloud className="w-12 h-12 text-primary animate-pulse" />
               <div>
                 <h2 className="text-2xl font-bold font-headline">Processing Data...</h2>
                 <p className="text-muted-foreground">Your CSV is being analyzed. Please wait.</p>
@@ -79,8 +79,8 @@ export default function Home() {
       case 'DASHBOARD':
         if (!processedData) return null;
         return (
-          <div className="grid h-full grid-cols-1 gap-6 p-4 md:grid-cols-12 lg:p-6 overflow-hidden">
-            <div className="md:col-span-12 lg:col-span-3 h-full overflow-y-auto pr-2">
+          <div className="grid h-full grid-cols-1 gap-6 p-4 md:grid-cols-12 lg:p-6 overflow-hidden max-h-[calc(100vh-140px)]">
+            <div className="md:col-span-12 lg:col-span-3 h-full overflow-y-auto pr-2 custom-scrollbar">
               <DataHealthDashboard data={processedData} />
             </div>
             <div className="flex flex-col md:col-span-7 lg:col-span-6 h-full overflow-hidden">
@@ -91,7 +91,7 @@ export default function Home() {
                 setConfirmedTypes={setConfirmedTypes}
               />
             </div>
-            <div className="md:col-span-5 lg:col-span-3 h-full overflow-y-auto pr-2">
+            <div className="md:col-span-5 lg:col-span-3 h-full overflow-y-auto pr-2 custom-scrollbar">
               <div className="flex flex-col gap-6">
                 <AuditLog log={auditLog} />
                 <ExportPanel
@@ -166,13 +166,6 @@ export default function Home() {
 
         <div className="flex-1 overflow-hidden">{renderContent()}</div>
       </main>
-
-      {/* Floating Data Assistant Button and Panel */}
-      {processedData && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <ChatbotPanel processedData={processedData} />
-        </div>
-      )}
     </div>
   );
 }
