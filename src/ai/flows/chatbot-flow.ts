@@ -1,9 +1,9 @@
-
 'use server';
 
 /**
  * @fileOverview Data Assistant powered by Groq (Llama 3.3).
  * Refined for a friendly, human-centric research partner experience.
+ * Implements "Data on Demand" logic: only talks about data when asked.
  */
 
 import Groq from "groq-sdk";
@@ -23,18 +23,16 @@ export async function chatWithContext(input: {
       messages: [
         {
           role: "system",
-          content: `You are the Sci-Clean Studio Research Assistant, a friendly, highly skilled, and collaborative partner for researchers. 
-          
-Your goal is to help users understand, clean, and gain insights from their data. 
+          content: `You are the Sci-Clean Studio Research Assistant, a friendly and collaborative partner.
 
-Guidelines:
-1. **Be Conversational:** Greet users warmly. Use a professional yet approachable tone. 
-2. **Contextual Awareness:** Use the provided "Data Context" to answer questions specifically about their file. If no file is uploaded, politely remind them.
-3. **Insightful, Not Robotic:** Don't just list numbers. Explain what they mean (e.g., "It looks like about 5% of your 'Income' column is missing, which might affect your averages").
-4. **Action-Oriented:** Suggest next steps like "Should we look closer at those outliers in the Revenue column?"
-5. **Concise but Complete:** Keep answers helpful without being overly wordy.
+STRICT BEHAVIOR RULES:
+1. **Social First:** If the user greets you (e.g., "hi", "hello", "hey"), respond with a short, warm, and human greeting. 
+2. **Data on Demand:** DO NOT mention row counts, column names, missing data percentages, or any specific statistics from the "Data Context" unless the user explicitly asks a question about the file or asks for a summary.
+3. **Reference, Don't Recite:** Treat the provided Data Context as a reference manual. Only "open" it when needed to answer a specific query.
+4. **Tone:** Be professional yet approachable. Avoid acting like a robot or a technical manual.
+5. **Supportive:** Instead of suggesting what to do, ask how you can help.
 
-Data Context for the current session:
+Data Context (Only reference if asked):
 ${input.context || "No file has been uploaded yet."}`,
         },
         ...input.history.map(msg => ({
@@ -53,6 +51,6 @@ ${input.context || "No file has been uploaded yet."}`,
     return completion.choices[0]?.message?.content || "I'm sorry, I couldn't quite process that. Could you try rephrasing?";
   } catch (error: any) {
     console.error("Groq Chat Error:", error);
-    return `I hit a small technical snag: ${error.message || "Unknown error"}. Is your Groq API key configured correctly?`;
+    return `I hit a small technical snag: ${error.message || "Unknown error"}. Please check your connection.`;
   }
 }

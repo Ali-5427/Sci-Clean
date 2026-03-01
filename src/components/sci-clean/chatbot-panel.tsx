@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -81,7 +80,7 @@ const ChatbotPanel = ({ processedData }: ChatbotPanelProps) => {
           <MessageSquare className="w-6 h-6" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-[400px] sm:w-[500px] p-0 flex flex-col pointer-events-auto">
+      <SheetContent side="right" className="w-[400px] sm:w-[500px] p-0 flex flex-col pointer-events-auto bg-background/95 backdrop-blur-md">
         <SheetHeader className="p-6 border-b bg-card/50">
           <SheetTitle className="flex items-center gap-2 text-xl font-headline">
             <Sparkles className="w-6 h-6 text-primary" />
@@ -92,7 +91,7 @@ const ChatbotPanel = ({ processedData }: ChatbotPanelProps) => {
           </SheetDescription>
         </SheetHeader>
         
-        <div className="flex-1 overflow-hidden flex flex-col bg-background/50">
+        <div className="flex-1 overflow-hidden flex flex-col">
           <ScrollArea className="flex-1 p-6">
             <div className="space-y-6">
               {messages.map((msg, idx) => (
