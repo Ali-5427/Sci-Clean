@@ -4,30 +4,44 @@
 
 Sci-Clean Studio is a lightweight, modern web application designed to streamline the initial data cleaning and profiling process for researchers and data analysts. It leverages AI to accelerate type inference and ensures every step is documented for full reproducibility.
 
+## 🚀 Getting Started
+
+To push this project to your own GitHub repository, follow these commands in your terminal:
+
+```bash
+# 1. Initialize the local repository
+git init
+
+# 2. Add all files (the .gitignore will protect your secrets)
+git add .
+
+# 3. Create your first commit
+git commit -m "Initial commit: Sci-Clean Studio Research MVP"
+
+# 4. Rename the branch to main
+git branch -M main
+
+# 5. Add your remote GitHub repository (Replace with your actual repo URL)
+git remote add origin https://github.com/YOUR_USERNAME/sci-clean-studio.git
+
+# 6. Push to GitHub
+git push -u origin main
+```
+
 ## Core Features
 
--   **📊 Stream-processed CSV Upload:** Upload and process large CSV files (up to 500MB) without crashing your browser. The app calculates a file hash and performs an initial data profiling pass.
--   **🩺 Data Health Dashboard:** Get an instant overview of your data's quality.
-    -   **Sparsity Score:** A single metric to understand the percentage of missing data.
-    -   **Missing Data Table:** A column-by-column breakdown of missing values.
-    -   **Missingness Heatmap:** A visual representation of where your data is missing.
--   **🤖 AI-Powered Type Inference:** Automatically detects the most likely data type for each column (Numeric, Text, Date, Categorical) and provides a confidence score, allowing you to quickly confirm or correct the types.
--   **📋 Reproducibility Audit Log:** Every action you take—from file upload to type confirmation—is recorded in a detailed audit log, ensuring your cleaning process is transparent and reproducible.
--   **🐍 Python Script Export:** Generate a complete, runnable Python script that uses the `pandas` library to replicate the exact cleaning steps you performed in the tool. You can also download the cleaned CSV directly.
-
-## How to Use
-
-1.  **Upload Data:** Drag and drop your `.csv` file onto the upload area.
-2.  **Review Dashboard:** Analyze the data health dashboard to understand sparsity and column-level issues.
-3.  **Confirm Types:** Go through the list of columns and confirm the AI-detected data types or manually select the correct one.
-4.  **Export Results:** Once all types are confirmed, you can download the reproducible Python script and the cleaned CSV file.
+-   **📊 Stream-processed CSV Upload:** Upload and process large CSV files (up to 500MB) without crashing your browser.
+-   **🩺 Data Health Dashboard:** Instant overview of sparsity, missingness heatmaps, and anomalies.
+-   **🤖 AI-Powered Research Assistant:** A friendly conversational partner (powered by Groq Llama 3.3) that helps you summarize and explore data health.
+-   **📋 Reproducibility Audit Log:** Every action is recorded and timestamped for academic transparency.
+-   **🐍 Python Script Export:** Generate a complete `pandas` script to replicate your cleaning steps exactly.
 
 ## Tech Stack
 
--   **Framework:** [Next.js](https://nextjs.org/) (with App Router)
--   **UI:** [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [shadcn/ui](https://ui.shadcn.com/), [Tailwind CSS](https://tailwindcss.com/)
--   **Generative AI:** [Genkit](https://firebase.google.com/docs/genkit)
+-   **Framework:** [Next.js 15](https://nextjs.org/)
+-   **UI:** [React 19](https://react.dev/), [shadcn/ui](https://ui.shadcn.com/), [Tailwind CSS](https://tailwindcss.com/)
+-   **Generative AI:** [Genkit](https://firebase.google.com/docs/genkit) & [Groq](https://groq.com/)
 -   **Icons:** [Lucide React](https://lucide.dev/)
 
 ---
-*Built with love ❤️ by Ali*
+*Developed for research reproducibility.*
