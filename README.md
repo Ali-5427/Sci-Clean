@@ -4,28 +4,23 @@
 
 Sci-Clean Studio is a lightweight, modern web application designed to streamline the initial data cleaning and profiling process for researchers and data analysts. It leverages AI to accelerate type inference and ensures every step is documented for full reproducibility.
 
-## 🚀 Getting Started
+## 🚀 GitHub Repository
 
-To push this project to your own GitHub repository, follow these commands in your terminal:
+This project is hosted at: [https://github.com/Ali-5427/Sci-Clean](https://github.com/Ali-5427/Sci-Clean)
+
+## 🛠️ How to Push Updates
+
+Whenever we make changes here in the studio, follow these steps in your local terminal to update your GitHub repo:
 
 ```bash
-# 1. Initialize the local repository
-git init
-
-# 2. Add all files (the .gitignore will protect your secrets)
+# 1. Stage all new changes
 git add .
 
-# 3. Create your first commit
-git commit -m "Initial commit: Sci-Clean Studio Research MVP"
+# 2. Commit the changes
+git commit -m "Update: [Describe your changes here]"
 
-# 4. Rename the branch to main
-git branch -M main
-
-# 5. Add your remote GitHub repository (Replace with your actual repo URL)
-git remote add origin https://github.com/YOUR_USERNAME/sci-clean-studio.git
-
-# 6. Push to GitHub
-git push -u origin main
+# 3. Push to GitHub
+git push origin main
 ```
 
 ## Core Features
